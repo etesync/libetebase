@@ -1,0 +1,9 @@
+prefix=@prefix@
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: Etebase
+Description: A C library for Etebase
+Version: 0.1.0
+Libs: -L${libdir} -letebase
+Cflags: -I${includedir}/etebase
