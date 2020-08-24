@@ -305,22 +305,22 @@ pub unsafe extern fn etebase_user_destroy(this: *mut User) {
 // Class Account {
 
 #[no_mangle]
-pub unsafe extern fn etebase_account_login(this: &Client, username: *const c_char, password: *const c_char) -> *mut Account {
+pub unsafe extern fn etebase_account_login(client: &Client, username: *const c_char, password: *const c_char) -> *mut Account {
     let username = CStr::from_ptr(username).to_str().unwrap();
     let password = CStr::from_ptr(password).to_str().unwrap();
     Box::into_raw(
         Box::new(
-            try_or_null!(Account::login(this.clone(), username, password))
+            try_or_null!(Account::login(client.clone(), username, password))
         )
     )
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_account_signup(this: &Client, user: &User, password: *const c_char) -> *mut Account {
+pub unsafe extern fn etebase_account_signup(client: &Client, user: &User, password: *const c_char) -> *mut Account {
     let password = CStr::from_ptr(password).to_str().unwrap();
     Box::into_raw(
         Box::new(
-            try_or_null!(Account::signup(this.clone(), user, password))
+            try_or_null!(Account::signup(client.clone(), user, password))
         )
     )
 }
