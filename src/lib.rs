@@ -1188,7 +1188,7 @@ pub unsafe extern fn etebase_collection_get_content(this: &Collection, buf: *mut
     let ret = try_or_int!(this.content());
     let size = std::cmp::min(buf_size, ret.len());
     buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
-    size as isize
+    ret.len() as isize
 }
 
 #[no_mangle]
@@ -1328,7 +1328,7 @@ pub unsafe extern fn etebase_item_get_content(this: &Item, buf: *mut c_void, buf
     let ret = try_or_int!(this.content());
     let size = std::cmp::min(buf_size, ret.len());
     buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
-    size as isize
+    ret.len() as isize
 }
 
 #[no_mangle]
