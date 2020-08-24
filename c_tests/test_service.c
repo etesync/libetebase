@@ -187,6 +187,80 @@ test_simple() {
 }
 
 int
+test_item_deps() {
+    EtebaseClient *client = etebase_client_new("libetebase-test", get_test_url());
+    EtebaseAccount *etebase = etebase_account_restore(client, TEST_USER_SESSION, NULL, 0);
+    etebase_client_destroy(client);
+
+    etebase_account_force_server_url(etebase, get_test_url());
+    etebase_account_fetch_token(etebase);
+
+    EtebaseCollectionManager *col_mgr = etebase_account_get_collection_manager(etebase);
+    EtebaseCollectionMetadata *col_meta = etebase_collection_metadata_new("Type", "Name");
+    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, col_meta, "", 0);
+    etebase_collection_metadata_destroy(col_meta);
+
+    etebase_collection_manager_upload(col_mgr, col, NULL);
+
+    EtebaseItemManager *item_mgr = etebase_collection_manager_get_item_manager(col_mgr, col);
+    EtebaseItemMetadata *item_meta = etebase_item_metadata_new();
+    const char item_content[] = "Item 1";
+    EtebaseItem *item1 = etebase_item_manager_create(item_mgr, item_meta, item_content, strlen(item_content));
+    const char item_content2[] = "Item 2";
+    EtebaseItem *item2 = etebase_item_manager_create(item_mgr, item_meta, item_content2, strlen(item_content2));
+    etebase_item_metadata_destroy(item_meta);
+
+    {
+        const EtebaseItem *items[] = { item1, item2 };
+        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+    }
+
+    {
+        const char *item1_uid = etebase_item_get_uid(item1);
+        // -> On device B:
+        EtebaseItem *item1 = etebase_item_manager_fetch(item_mgr, item1_uid, NULL);
+        fail_if(!item1);
+        const char tmp[] = "Something else for item1";
+        etebase_item_set_content(item1, tmp, strlen(tmp));
+        const EtebaseItem *items[] = { item1 };
+        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+        etebase_item_destroy(item1);
+    }
+
+
+    {
+        // -> On device A (using the previously saved collection)
+        const char tmp[] = "New content for item 2";
+        etebase_item_set_content(item2, tmp, strlen(tmp));
+
+        // Will both fail because item1 changed
+        const EtebaseItem *items[] = { item2 };
+        const EtebaseItem *deps[] = { item1 };
+        fail_if(!etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items),
+                    deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
+        fail_if(!etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items),
+                    deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
+
+        // Can even use the item in both the list and deps in batch
+        // Will fail because item1 changed on device B
+
+        const EtebaseItem *items2[] = { item1, item2 };
+        fail_if(!etebase_item_manager_batch(item_mgr, items2, ETEBASE_UTILS_C_ARRAY_LEN(items2),
+                    deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
+    }
+
+    etebase_account_logout(etebase);
+
+    etebase_item_destroy(item2);
+    etebase_item_destroy(item1);
+    etebase_item_manager_destroy(item_mgr);
+    etebase_collection_destroy(col);
+    etebase_collection_manager_destroy(col_mgr);
+    etebase_account_destroy(etebase);
+    return 0;
+}
+
+int
 test_bad_auth() {
     EtebaseClient *client = etebase_client_new("libetebase-test", get_test_url());
     {
