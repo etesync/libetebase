@@ -8,7 +8,7 @@ use std::os::raw::{c_char, c_void};
 use std::ffi::{CString, CStr};
 
 use etebase::{
-    API_URL,
+    DEFAULT_SERVER_URL,
 
     Client,
     User,
@@ -158,7 +158,7 @@ pub extern fn etebase_get_default_server_url() -> *const c_char {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
-        *ret.borrow_mut() = CString::new(API_URL).ok();
+        *ret.borrow_mut() = CString::new(DEFAULT_SERVER_URL).ok();
         ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
     })
 }
