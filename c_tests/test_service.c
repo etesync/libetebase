@@ -166,7 +166,7 @@ test_simple() {
 
     {
         const EtebaseItem *items[] = { item };
-        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
     }
 
     {
@@ -177,7 +177,7 @@ test_simple() {
         free(old_etag);
 
         const EtebaseItem *items[] = { item };
-        fail_if(etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+        fail_if(etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
 
         EtebaseItemListResponse *item_list = etebase_item_manager_list(item_mgr, NULL);
         fail_if(!item_list);
@@ -244,7 +244,7 @@ test_item_deps() {
 
     {
         const EtebaseItem *items[] = { item1, item2 };
-        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
     }
 
     {
@@ -255,7 +255,7 @@ test_item_deps() {
         const char tmp[] = "Something else for item1";
         etebase_item_set_content(item1, tmp, strlen(tmp));
         const EtebaseItem *items[] = { item1 };
-        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
         etebase_item_destroy(item1);
     }
 
@@ -268,16 +268,16 @@ test_item_deps() {
         // Will both fail because item1 changed
         const EtebaseItem *items[] = { item2 };
         const EtebaseItem *deps[] = { item1 };
-        fail_if(!etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items),
+        fail_if(!etebase_item_manager_transaction_deps(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items),
                     deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
-        fail_if(!etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items),
+        fail_if(!etebase_item_manager_batch_deps(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items),
                     deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
 
         // Can even use the item in both the list and deps in batch
         // Will fail because item1 changed on device B
 
         const EtebaseItem *items2[] = { item1, item2 };
-        fail_if(!etebase_item_manager_batch(item_mgr, items2, ETEBASE_UTILS_C_ARRAY_LEN(items2),
+        fail_if(!etebase_item_manager_batch_deps(item_mgr, items2, ETEBASE_UTILS_C_ARRAY_LEN(items2),
                     deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
     }
 
@@ -391,7 +391,7 @@ test_collection_transactions() {
                 etebase_item_metadata_destroy(item_meta);
                 {
                     const EtebaseItem *items[] = { item };
-                    fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+                    fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
                 }
                 etebase_item_destroy(item);
             }
@@ -454,7 +454,7 @@ test_items_transactions() {
     etebase_item_metadata_destroy(item_meta);
 
     const EtebaseItem *items[] = { item1, item2 };
-    fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+    fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
 
     char *item1_uid = strdup(etebase_item_get_uid(item1));
     char *item2_uid = strdup(etebase_item_get_uid(item2));
@@ -470,7 +470,7 @@ test_items_transactions() {
             etebase_item_set_content(item1, tmp, strlen(tmp));
 
             const EtebaseItem *items[] = { item1 };
-            etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL);
+            etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL);
 
             etebase_item_destroy(item1);
         }
@@ -484,12 +484,12 @@ test_items_transactions() {
 
         // Will fail because item1 changed on device B
         const EtebaseItem *items[] = { item1, item2 };
-        fail_if(!etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+        fail_if(!etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
         // Will succeed
-        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
         // Will succeed because item2 hasn't changed on device B
         // const EtebaseItem *items2[] = { item2 };
-        // fail_if(etebase_item_manager_transaction(item_mgr, items2, ETEBASE_UTILS_C_ARRAY_LEN(items2), NULL, 0, NULL));
+        // fail_if(etebase_item_manager_transaction(item_mgr, items2, ETEBASE_UTILS_C_ARRAY_LEN(items2), NULL));
 
         etebase_item_destroy(item2);
         etebase_item_destroy(item1);
@@ -510,7 +510,7 @@ test_items_transactions() {
             etebase_item_set_content(item1, tmp, strlen(tmp));
 
             const EtebaseItem *items[] = { another_item };
-            etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL);
+            etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL);
 
             etebase_item_destroy(another_item);
         }
@@ -525,14 +525,14 @@ test_items_transactions() {
         EtebaseFetchOptions *fetch_options = etebase_fetch_options_new();
         etebase_fetch_options_set_stoken(fetch_options, stoken);
         const EtebaseItem *items[] = { item };
-        fail_if(!etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, fetch_options));
-        fail_if(!etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, fetch_options));
+        fail_if(!etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), fetch_options));
+        fail_if(!etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), fetch_options));
 
         etebase_fetch_options_destroy(fetch_options);
 
         // Will both succeed
-        fail_if(etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
-        // fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+        fail_if(etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
+        // fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
 
         etebase_item_destroy(item);
     }
@@ -551,7 +551,7 @@ test_items_transactions() {
             etebase_item_set_content(item1, tmp, strlen(tmp));
 
             const EtebaseItem *items[] = { item1 };
-            etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL);
+            etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL);
 
             etebase_item_destroy(item1);
         }
@@ -565,15 +565,15 @@ test_items_transactions() {
         {
             const EtebaseItem *items[] = { item2 };
             const EtebaseItem *deps[] = { item1 };
-            fail_if(!etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
-            fail_if(!etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
+            fail_if(!etebase_item_manager_batch_deps(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
+            fail_if(!etebase_item_manager_transaction_deps(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
         }
 
         // Can even use the item in both the list and deps in batch
         // Will fail because item1 changed on device B
         const EtebaseItem *items[] = { item1, item2 };
         const EtebaseItem *deps[] = { item1 };
-        fail_if(!etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
+        fail_if(!etebase_item_manager_batch_deps(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
 
         etebase_item_destroy(item2);
         etebase_item_destroy(item1);
@@ -628,18 +628,18 @@ test_collection_as_item() {
         {
             const EtebaseItem *items[] = { col_item, item1 };
             const EtebaseItem *deps[] = { item2 };
-            fail_if(!etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items),
+            fail_if(!etebase_item_manager_transaction_deps(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items),
                         deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
         }
         {
             const EtebaseItem *items[] = { item1, item2 };
             const EtebaseItem *deps[] = { col_item };
-            fail_if(etebase_item_manager_transaction(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items),
+            fail_if(etebase_item_manager_transaction_deps(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items),
                         deps, ETEBASE_UTILS_C_ARRAY_LEN(deps), NULL));
         }
         {
             const EtebaseItem *items[] = { col_item, item1 };
-            fail_if(!etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+            fail_if(!etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
         }
 
         // In addition, these are true:
@@ -688,14 +688,14 @@ test_item_revisions() {
     etebase_item_metadata_destroy(item_meta);
 
     const EtebaseItem *items[] = { item };
-    fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+    fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
 
     {
         const char tmp[] = "Second draft";
         etebase_item_set_content(item, tmp, strlen(tmp));
 
         const EtebaseItem *items[] = { item };
-        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL, 0, NULL));
+        fail_if(etebase_item_manager_batch(item_mgr, items, ETEBASE_UTILS_C_ARRAY_LEN(items), NULL));
     }
 
     EtebaseItemRevisionsListResponse *revisions = etebase_item_manager_item_revisions(item_mgr, item, NULL);

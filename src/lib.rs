@@ -1058,7 +1058,12 @@ pub unsafe extern fn etebase_item_manager_fetch_updates(this: &ItemManager, item
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_batch(this: &ItemManager, items: *const &Item, items_size: usize, deps: *const &Item, deps_size: usize, fetch_options: Option<&FetchOptions>) -> i32 {
+pub unsafe extern fn etebase_item_manager_batch(this: &ItemManager, items: *const &Item, items_size: usize, fetch_options: Option<&FetchOptions>) -> i32 {
+    etebase_item_manager_batch_deps(this, items, items_size, std::ptr::null(), 0, fetch_options)
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_item_manager_batch_deps(this: &ItemManager, items: *const &Item, items_size: usize, deps: *const &Item, deps_size: usize, fetch_options: Option<&FetchOptions>) -> i32 {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
     let items = std::slice::from_raw_parts(items, items_size).into_iter().map(|x| *x);
     let deps = ptr_to_option(deps);
@@ -1072,7 +1077,12 @@ pub unsafe extern fn etebase_item_manager_batch(this: &ItemManager, items: *cons
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_transaction(this: &ItemManager, items: *const &Item, items_size: usize, deps: *const &Item, deps_size: usize, fetch_options: Option<&FetchOptions>) -> i32 {
+pub unsafe extern fn etebase_item_manager_transaction(this: &ItemManager, items: *const &Item, items_size: usize, fetch_options: Option<&FetchOptions>) -> i32 {
+    etebase_item_manager_transaction_deps(this, items, items_size, std::ptr::null(), 0, fetch_options)
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_item_manager_transaction_deps(this: &ItemManager, items: *const &Item, items_size: usize, deps: *const &Item, deps_size: usize, fetch_options: Option<&FetchOptions>) -> i32 {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
     let items = std::slice::from_raw_parts(items, items_size).into_iter().map(|x| *x);
     let deps = ptr_to_option(deps);
