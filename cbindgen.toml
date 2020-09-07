@@ -45,9 +45,6 @@ exclude = ["CURRENT_VERSION", "SYMMETRIC_KEY_SIZE", "SYMMETRIC_NONCE_SIZE", "SYM
 
 [export.rename]
 "ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE" = "ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE"
-"EtebaseErrorCode" = "EtebaseErrorCode"
-"EtebasePrefetchOption" = "EtebasePrefetchOption"
-"EtebaseCollectionAccessLevel" = "EtebaseCollectionAccessLevel"
 
 [fn]
 # An optional prefix to put before every function declaration

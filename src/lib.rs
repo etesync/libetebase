@@ -19,8 +19,6 @@ use etebase::{
     Item,
     ItemMetadata,
 
-    PrefetchOption,
-
     CollectionAccessLevel,
     SignedInvitation,
     CollectionMember,
@@ -81,7 +79,7 @@ fn update_last_error(err: Error) {
 
 #[no_mangle]
 #[repr(u32)]
-pub enum EtebaseErrorCode {
+pub enum ErrorCode {
     NoError,
 
     Generic,
@@ -104,29 +102,29 @@ pub enum EtebaseErrorCode {
 }
 
 #[no_mangle]
-pub extern fn etebase_error_get_code() -> EtebaseErrorCode {
+pub extern fn etebase_error_get_code() -> ErrorCode {
     LAST_ERROR.with(|prev| {
         match *prev.borrow() {
             Some(ref err) => match err {
-                Error::Generic(_) => EtebaseErrorCode::Generic,
-                Error::UrlParse(_) => EtebaseErrorCode::UrlParse,
-                Error::MsgPack(_) => EtebaseErrorCode::MsgPack,
-                Error::ProgrammingError(_) => EtebaseErrorCode::ProgrammingError,
-                Error::MissingContent(_) => EtebaseErrorCode::MissingContent,
-                Error::Padding(_) => EtebaseErrorCode::Padding,
-                Error::Base64(_) => EtebaseErrorCode::Base64,
-                Error::Encryption(_) => EtebaseErrorCode::Encryption,
-                Error::Unauthorized(_) => EtebaseErrorCode::Unauthorized,
-                Error::Conflict(_) => EtebaseErrorCode::Conflict,
-                Error::PermissionDenied(_) => EtebaseErrorCode::PermissionDenied,
-                Error::NotFound(_) => EtebaseErrorCode::NotFound,
+                Error::Generic(_) => ErrorCode::Generic,
+                Error::UrlParse(_) => ErrorCode::UrlParse,
+                Error::MsgPack(_) => ErrorCode::MsgPack,
+                Error::ProgrammingError(_) => ErrorCode::ProgrammingError,
+                Error::MissingContent(_) => ErrorCode::MissingContent,
+                Error::Padding(_) => ErrorCode::Padding,
+                Error::Base64(_) => ErrorCode::Base64,
+                Error::Encryption(_) => ErrorCode::Encryption,
+                Error::Unauthorized(_) => ErrorCode::Unauthorized,
+                Error::Conflict(_) => ErrorCode::Conflict,
+                Error::PermissionDenied(_) => ErrorCode::PermissionDenied,
+                Error::NotFound(_) => ErrorCode::NotFound,
 
-                Error::Connection(_) => EtebaseErrorCode::Connection,
-                Error::TemporaryServerError(_) => EtebaseErrorCode::TemporaryServerError,
-                Error::ServerError(_) => EtebaseErrorCode::ServerError,
-                Error::Http(_) => EtebaseErrorCode::Http,
+                Error::Connection(_) => ErrorCode::Connection,
+                Error::TemporaryServerError(_) => ErrorCode::TemporaryServerError,
+                Error::ServerError(_) => ErrorCode::ServerError,
+                Error::Http(_) => ErrorCode::Http,
             },
-            None => EtebaseErrorCode::NoError,
+            None => ErrorCode::NoError,
         }
     })
 }
@@ -574,7 +572,7 @@ pub unsafe extern fn etebase_item_revisions_list_response_destroy(this: *mut Ite
 
 #[no_mangle]
 #[repr(u32)]
-pub enum EtebasePrefetchOption {
+pub enum PrefetchOption {
     Auto,
     Medium,
 }
@@ -588,7 +586,7 @@ pub struct FetchOptions {
     limit: Option<usize>,
     stoken: Option<String>,
     iterator: Option<String>,
-    prefetch: Option<PrefetchOption>,
+    prefetch: Option<etebase::PrefetchOption>,
     with_collection: Option<bool>,
 }
 
@@ -607,10 +605,10 @@ impl FetchOptions {
         self.limit = Some(limit);
     }
 
-    pub fn prefetch(&mut self, prefetch: EtebasePrefetchOption) {
+    pub fn prefetch(&mut self, prefetch: PrefetchOption) {
         let prefetch = match prefetch {
-            EtebasePrefetchOption::Auto => PrefetchOption::Auto,
-            EtebasePrefetchOption::Medium => PrefetchOption::Medium,
+            PrefetchOption::Auto => etebase::PrefetchOption::Auto,
+            PrefetchOption::Medium => etebase::PrefetchOption::Medium,
         };
         self.prefetch = Some(prefetch);
     }
@@ -659,7 +657,7 @@ pub unsafe extern fn etebase_fetch_options_set_limit(this: &mut FetchOptions, li
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_fetch_options_set_prefetch(this: &mut FetchOptions, prefetch: EtebasePrefetchOption) {
+pub unsafe extern fn etebase_fetch_options_set_prefetch(this: &mut FetchOptions, prefetch: PrefetchOption) {
     this.prefetch(prefetch);
 }
 
