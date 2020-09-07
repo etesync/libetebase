@@ -765,7 +765,7 @@ test_basic_invitations() {
         // Print the users and their access levels
         const EtebaseCollectionMember *member = data[0];
         assert_str_eq("test_user", etebase_collection_member_get_username(member));
-        assert_str_eq(ETEBASE_COLLECTION_ACCESS_LEVEL_ADMIN, etebase_collection_member_get_access_level(member));
+        assert_int_eq(ETEBASE_COLLECTION_ACCESS_LEVEL_ADMIN, etebase_collection_member_get_access_level(member));
 
         etebase_member_list_response_destroy(members);
         etebase_collection_member_manager_destroy(member_manager);

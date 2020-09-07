@@ -1255,15 +1255,8 @@ pub unsafe extern fn etebase_collection_as_item(this: &Collection) -> *mut Item 
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_collection_get_access_level(this: &Collection) -> *const c_char {
-    let string = String::from(this.access_level());
-    thread_local! {
-        static LAST: RefCell<Option<CString>> = RefCell::new(None);
-    }
-    LAST.with(|ret| {
-        *ret.borrow_mut() = CString::new(&string[..]).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
-    })
+pub unsafe extern fn etebase_collection_get_access_level(this: &Collection) -> CollectionAccessLevel {
+    this.access_level()
 }
 
 #[no_mangle]
@@ -1490,11 +1483,10 @@ pub unsafe extern fn etebase_invitation_manager_fetch_user_profile(this: &Collec
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_invite(this: &CollectionInvitationManager, collection: &Collection, username: *const c_char, pubkey: *const c_void, pubkey_size: usize, access_level: *const c_char) -> i32 {
+pub unsafe extern fn etebase_invitation_manager_invite(this: &CollectionInvitationManager, collection: &Collection, username: *const c_char, pubkey: *const c_void, pubkey_size: usize, access_level: CollectionAccessLevel) -> i32 {
     let username = CStr::from_ptr(username).to_str().unwrap();
     let pubkey = std::slice::from_raw_parts(pubkey as *const u8, pubkey_size);
-    let access_level = CollectionAccessLevel::from(CStr::from_ptr(access_level).to_str().unwrap());
-    try_or_int!(this.invite(collection, username, pubkey, &access_level));
+    try_or_int!(this.invite(collection, username, pubkey, access_level));
     0
 }
 
@@ -1568,15 +1560,8 @@ pub unsafe extern fn etebase_signed_invitation_get_collection(this: &SignedInvit
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_signed_invitation_get_access_level(this: &SignedInvitation) -> *const c_char {
-    let string = String::from(this.access_level());
-    thread_local! {
-        static LAST: RefCell<Option<CString>> = RefCell::new(None);
-    }
-    LAST.with(|ret| {
-        *ret.borrow_mut() = CString::new(&string[..]).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
-    })
+pub unsafe extern fn etebase_signed_invitation_get_access_level(this: &SignedInvitation) -> CollectionAccessLevel {
+    this.access_level()
 }
 
 #[no_mangle]
@@ -1621,15 +1606,8 @@ pub unsafe extern fn etebase_collection_member_get_username(this: &CollectionMem
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_get_access_level(this: &CollectionMember) -> *const c_char {
-    let string = String::from(this.access_level());
-    thread_local! {
-        static LAST: RefCell<Option<CString>> = RefCell::new(None);
-    }
-    LAST.with(|ret| {
-        *ret.borrow_mut() = CString::new(&string[..]).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
-    })
+pub unsafe extern fn etebase_collection_member_get_access_level(this: &CollectionMember) -> CollectionAccessLevel {
+    this.access_level()
 }
 
 #[no_mangle]
@@ -1708,10 +1686,9 @@ pub unsafe extern fn etebase_collection_member_manager_leave(this: &CollectionMe
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_manager_modify_access_level(this: &CollectionMemberManager, username: *const c_char, access_level: *const c_char) -> i32 {
+pub unsafe extern fn etebase_collection_member_manager_modify_access_level(this: &CollectionMemberManager, username: *const c_char, access_level: CollectionAccessLevel) -> i32 {
     let username = CStr::from_ptr(username).to_str().unwrap();
-    let access_level = CollectionAccessLevel::from(CStr::from_ptr(access_level).to_str().unwrap());
-    try_or_int!(this.modify_access_level(username, &access_level));
+    try_or_int!(this.modify_access_level(username, access_level));
     0
 }
 
