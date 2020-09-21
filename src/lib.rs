@@ -1172,7 +1172,7 @@ pub unsafe extern fn etebase_collection_set_meta_raw(this: &mut Collection, meta
     0
 }
 
-/// Returns the actual size of the buffer whether buf is NULL or not.
+/// Returns the actual size of the data whether buf is NULL or not.
 /// Writes at most buf_size to buf, and buf is *NOT* null terminated.
 #[no_mangle]
 pub unsafe extern fn etebase_collection_get_meta_raw(this: &Collection, buf: *mut c_void, buf_size: usize) -> isize {
@@ -1189,7 +1189,7 @@ pub unsafe extern fn etebase_collection_set_content(this: &mut Collection, conte
     0
 }
 
-/// Returns the actual size of the buffer whether buf is NULL or not.
+/// Returns the actual size of the data whether buf is NULL or not.
 /// Writes at most buf_size to buf, and buf is *NOT* null terminated.
 #[no_mangle]
 pub unsafe extern fn etebase_collection_get_content(this: &Collection, buf: *mut c_void, buf_size: usize) -> isize {
@@ -1304,7 +1304,7 @@ pub unsafe extern fn etebase_item_set_meta_raw(this: &mut Item, meta: *const c_v
     0
 }
 
-/// Returns the actual size of the buffer whether buf is NULL or not.
+/// Returns the actual size of the data whether buf is NULL or not.
 /// Writes at most buf_size to buf, and buf is *NOT* null terminated.
 #[no_mangle]
 pub unsafe extern fn etebase_item_get_meta_raw(this: &Item, buf: *mut c_void, buf_size: usize) -> isize {
@@ -1322,7 +1322,7 @@ pub unsafe extern fn etebase_item_set_content(this: &mut Item, content: *const c
     0
 }
 
-/// Returns the actual size of the buffer whether buf is NULL or not.
+/// Returns the actual size of the data whether buf is NULL or not.
 /// Writes at most buf_size to buf, and buf is *NOT* null terminated.
 #[no_mangle]
 pub unsafe extern fn etebase_item_get_content(this: &Item, buf: *mut c_void, buf_size: usize) -> isize {
