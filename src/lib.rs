@@ -1238,7 +1238,7 @@ pub unsafe extern fn etebase_collection_get_stoken(this: &Collection) -> *const 
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
-        *ret.borrow_mut() = CString::new(this.etag()).ok();
+        *ret.borrow_mut() = this.stoken().map(|x| CString::new(x).unwrap());
         ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
     })
 }
