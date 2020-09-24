@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.1.3
+* Collection stoken: fix fetching a collection's stoken
+* Update etebase dependency
+
 ## Version 0.1.2
 * Expose the access level as int rather than string
 * Add Cmake configuration file
