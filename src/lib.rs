@@ -1563,6 +1563,11 @@ pub unsafe extern fn etebase_signed_invitation_get_access_level(this: &SignedInv
 }
 
 #[no_mangle]
+pub unsafe extern fn etebase_signed_invitation_get_from_username(this: &SignedInvitation) -> *const c_void {
+    this.from_username().map(|x| x.as_ptr()).unwrap_or(std::ptr::null()) as *const c_void
+}
+
+#[no_mangle]
 pub unsafe extern fn etebase_signed_invitation_get_from_pubkey(this: &SignedInvitation) -> *const c_void {
     this.from_pubkey().as_ptr() as *const c_void
 }
