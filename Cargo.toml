@@ -17,4 +17,4 @@ crate-type = ["cdylib"]
 cbindgen = "^0.14.2"
 
 [dependencies]
-etebase = { git = "https://github.com/etesync/etesync-rs", rev = "c850eeb578ba01d1a1642495f204ca0add8dd6f2" }
+etebase = { git = "https://github.com/etesync/etesync-rs", rev = "0d369a74763acf1320dcf410b6b73a094a82674e" }
