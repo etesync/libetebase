@@ -437,7 +437,7 @@ checksum = "bd7d4bd64732af4bf3a67f367c27df8520ad7e230c5817b8ff485864d80242b9"
 
 [[package]]
 name = "libetebase"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "cbindgen",
  "etebase",
