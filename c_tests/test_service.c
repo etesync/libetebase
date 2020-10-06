@@ -84,6 +84,23 @@ test_utils() {
 }
 
 int
+test_check_etebase_server() {
+    EtebaseClient *client = etebase_client_new("libetebase-test", get_test_url());
+    fail_if(etebase_client_check_etebase_server(client));
+    etebase_client_destroy(client);
+    /*
+    let test_url = format!("{}/a", test_url());
+    let client = Client::new(CLIENT_NAME, &test_url)?;
+    assert!(!Account::is_etebase_server(&client)?);
+    */
+    client = etebase_client_new("libetebase-test", "http://doesnotexist");
+    fail_if(!etebase_client_check_etebase_server(client));
+    etebase_client_destroy(client);
+
+    return 0;
+}
+
+int
 test_simple() {
     EtebaseClient *client = etebase_client_new("libetebase-test", get_test_url());
     EtebaseAccount *etebase = etebase_account_restore(client, TEST_USER_SESSION, NULL, 0);

@@ -236,6 +236,12 @@ pub unsafe extern fn etebase_client_set_server_url(this: &mut Client, server_url
 }
 
 #[no_mangle]
+pub unsafe extern fn etebase_client_check_etebase_server(client: &Client) -> i32 {
+    try_or_int!(Account::is_etebase_server(client));
+    0
+}
+
+#[no_mangle]
 pub unsafe extern fn etebase_client_destroy(this: *mut Client) {
     let this = Box::from_raw(this);
     drop(this);
