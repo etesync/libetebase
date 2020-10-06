@@ -6,6 +6,7 @@
 use std::cell::RefCell;
 use std::os::raw::{c_char, c_void};
 use std::ffi::{CString, CStr};
+use std::path::PathBuf;
 
 use etebase::{
     DEFAULT_SERVER_URL,
@@ -25,6 +26,8 @@ use etebase::{
     RemovedCollection,
 
     UserProfile,
+
+    fs_cache::FileSystemCache,
 
     error::Error,
     managers::{
@@ -1704,6 +1707,142 @@ pub unsafe extern fn etebase_collection_member_manager_modify_access_level(this:
 
 #[no_mangle]
 pub unsafe extern fn etebase_collection_member_manager_destroy(this: *mut CollectionMemberManager) {
+    let this = Box::from_raw(this);
+    drop(this);
+}
+
+// }
+
+
+// Class FileSystemCache {
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_new(path: *const c_char, username: *const c_char) -> *mut FileSystemCache {
+    let path = PathBuf::from(CStr::from_ptr(path).to_str().unwrap());
+    let username = CStr::from_ptr(username).to_str().unwrap();
+    Box::into_raw(
+        Box::new(
+            try_or_null!(FileSystemCache::new(path.as_path(), username))
+        )
+    )
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_clear_user(this: &FileSystemCache) -> i32 {
+    try_or_int!(this.clear_user_cache());
+    0
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_save_account(this: &FileSystemCache, etebase: &Account, encryption_key: *const c_void, encryption_key_size: usize) -> i32 {
+    let encryption_key = if encryption_key.is_null() {
+        None
+    } else {
+        Some(std::slice::from_raw_parts(encryption_key as *const u8, encryption_key_size))
+    };
+    try_or_int!(this.save_account(etebase, encryption_key));
+    0
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_load_account(this: &FileSystemCache, client: &Client, encryption_key: *const c_void, encryption_key_size: usize) -> *mut Account {
+    let encryption_key = if encryption_key.is_null() {
+        None
+    } else {
+        Some(std::slice::from_raw_parts(encryption_key as *const u8, encryption_key_size))
+    };
+    Box::into_raw(
+        Box::new(
+            try_or_null!(this.load_account(client, encryption_key))
+        )
+    )
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_save_stoken(this: &FileSystemCache, stoken: *const c_char) -> i32 {
+    let stoken = CStr::from_ptr(stoken).to_str().unwrap();
+    try_or_int!(this.save_stoken(stoken));
+    0
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_load_stoken(this: &FileSystemCache) -> *mut c_char {
+    let stoken = try_or_null!(this.load_stoken());
+    match stoken {
+        Some(stoken) => try_or_null!(CString::new(stoken)).into_raw(),
+        None => std::ptr::null_mut()
+    }
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_collection_save_stoken(this: &FileSystemCache, col_uid: *const c_char, stoken: *const c_char) -> i32 {
+    let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
+    let stoken = CStr::from_ptr(stoken).to_str().unwrap();
+    try_or_int!(this.collection_save_stoken(col_uid, stoken));
+    0
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_collection_load_stoken(this: &FileSystemCache, col_uid: *const c_char) -> *mut c_char {
+    let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
+    let stoken = try_or_null!(this.collection_load_stoken(col_uid));
+    match stoken {
+        Some(stoken) => try_or_null!(CString::new(stoken)).into_raw(),
+        None => std::ptr::null_mut()
+    }
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_collection_set(this: &FileSystemCache, col_mgr: &CollectionManager, col: &Collection) -> i32 {
+    try_or_int!(this.collection_set(col_mgr, col));
+    0
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_collection_unset(this: &FileSystemCache, col_mgr: &CollectionManager, col_uid: *const c_char) -> i32 {
+    let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
+    try_or_int!(this.collection_unset(col_mgr, col_uid));
+    0
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_collection_get(this: &FileSystemCache, col_mgr: &CollectionManager, col_uid: *const c_char) -> *mut Collection {
+    let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
+    Box::into_raw(
+        Box::new(
+            try_or_null!(this.collection(col_mgr, col_uid))
+        )
+    )
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_item_set(this: &FileSystemCache, item_mgr: &ItemManager, col_uid: *const c_char, item: &Item) -> i32 {
+    let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
+    try_or_int!(this.item_set(item_mgr, col_uid, item));
+    0
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_item_unset(this: &FileSystemCache, item_mgr: &ItemManager, col_uid: *const c_char, item_uid: *const c_char) -> i32 {
+    let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
+    let item_uid = CStr::from_ptr(item_uid).to_str().unwrap();
+    try_or_int!(this.item_unset(item_mgr, col_uid, item_uid));
+    0
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_item_get(this: &FileSystemCache, item_mgr: &ItemManager, col_uid: *const c_char, item_uid: *const c_char) -> *mut Item {
+    let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
+    let item_uid = CStr::from_ptr(item_uid).to_str().unwrap();
+    Box::into_raw(
+        Box::new(
+            try_or_null!(this.item(item_mgr, col_uid, item_uid))
+        )
+    )
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_fs_cache_destroy(this: *mut FileSystemCache) {
     let this = Box::from_raw(this);
     drop(this);
 }
