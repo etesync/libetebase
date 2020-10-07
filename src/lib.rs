@@ -235,10 +235,11 @@ pub unsafe extern fn etebase_client_set_server_url(this: &mut Client, server_url
     0
 }
 
+/// Returns 0 if client is pointing an etebase server, 1 if not, -1 on error
 #[no_mangle]
-pub unsafe extern fn etebase_client_check_etebase_server(client: &Client) -> i32 {
-    try_or_int!(Account::is_etebase_server(client));
-    0
+pub unsafe extern fn etebase_client_is_etebase_server(client: &Client) -> i32 {
+    let ret = try_or_int!(Account::is_etebase_server(client));
+    if ret { 0 } else { 1 }
 }
 
 #[no_mangle]
