@@ -340,6 +340,12 @@ pub unsafe extern fn etebase_account_fetch_token(this: &mut Account) -> i32 {
 }
 
 #[no_mangle]
+pub unsafe extern fn etebase_account_fetch_dashboard_url(this: &Account) -> *mut c_char {
+    let url = try_or_null!(this.fetch_dashboard_url());
+    try_or_null!(CString::new(url)).into_raw()
+}
+
+#[no_mangle]
 pub unsafe extern fn etebase_account_force_server_url(this: &mut Account, server_url: *const c_char) -> i32 {
     let server_url = CStr::from_ptr(server_url).to_str().unwrap();
     try_or_int!(this.force_server_url(server_url));
