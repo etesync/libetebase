@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.2.0
+* Expose a function to fetch the dashboard url of an account
+* Expose the FileSystemCache module for caching the data locally
+* Expose a function te check whether it's an etebase server
+* Update etebase dependency
+
 ## Version 0.1.4
 * Invitations: expose from_username
 * Update etebase dependency
