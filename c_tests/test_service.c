@@ -9,6 +9,8 @@
 
 const char TEST_USER_SESSION[] = "gqd2ZXJzaW9uAa1lbmNyeXB0ZWREYXRhxQGr_KWyDChQ6tXOJwJKf0Kw3QyR99itPIF3vZ5w6pVXSIq7AWul3fIXjIZOsBEwTVRumw7e9Af38D5oIL2VLNPLlmTOMjzIvuB00z3zDMFbH8pwrg2p_FvAhLHGjUGoXzU2XIxS4If7rQUfEz1zWkHPqWMrj4hACML5fks302dOUw7OsSMekcQaaVqMyj82MY3lG2qj8CL6ykSED7nW6OYWwMBJ1rSDGXhQRd5JuCGl6kgAHxKS6gkkIAWeUKjC6-Th2etk1XPKDiks0SZrQpmuXG8h_TBdd4igjRUqnIk09z5wvJFViXIU4M3pQomyFPk3Slh7KHvWhzxG0zbC2kUngQZ5h-LbVTLuT_TQWjYmHiOIihenrzl7z9MLebUq6vuwusZMRJ1Atau0Y2HcOzulYt4tLRP49d56qFEId3R4xomZ666hy-EFodsbzpxEKHeBUro3_gifOOKR8zkyLKTRz1UipZfKvnWk_RHFgZlSClRsXyaP34wstUavSiz-HNmTEmflNQKM7Awfel108FcSbW9NQAogW2Y2copP-P-R-DiHThrXmgDsWkTQFA";
 
+const char *COL_TYPE = "some.coltype";
+
 const char *
 get_test_url() {
     const char *env = getenv("ETEBASE_TEST_API_URL");
@@ -27,10 +29,17 @@ test_simple_getters() {
     etebase_client_destroy(client);
 
     EtebaseCollectionManager *col_mgr = etebase_account_get_collection_manager(etebase);
-    EtebaseCollectionMetadata *col_meta = etebase_collection_metadata_new("Type", "Name");
+    EtebaseItemMetadata *col_meta = etebase_item_metadata_new();
+    etebase_item_metadata_set_name(col_meta, "Name");
     const char content[] = "Something";
-    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, col_meta, content, strlen(content));
-    etebase_collection_metadata_destroy(col_meta);
+    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, COL_TYPE, col_meta, content, strlen(content));
+    etebase_item_metadata_destroy(col_meta);
+
+    {
+        char *col_type = etebase_collection_get_collection_type(col);
+        assert_str_eq(col_type, COL_TYPE);
+        free(col_type);
+    }
 
     // Check we can just get the content size if we pass null as the buffer
     {
@@ -110,10 +119,11 @@ test_simple() {
     etebase_account_fetch_token(etebase);
 
     EtebaseCollectionManager *col_mgr = etebase_account_get_collection_manager(etebase);
-    EtebaseCollectionMetadata *col_meta = etebase_collection_metadata_new("Type", "Name");
+    EtebaseItemMetadata *col_meta = etebase_item_metadata_new();
+    etebase_item_metadata_set_name(col_meta, "Name");
     const char content[] = "Something";
-    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, col_meta, content, strlen(content));
-    etebase_collection_metadata_destroy(col_meta);
+    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, COL_TYPE, col_meta, content, strlen(content));
+    etebase_item_metadata_destroy(col_meta);
 
     {
         char tmp[1000];
@@ -132,7 +142,7 @@ test_simple() {
     }
 
     {
-        EtebaseCollectionListResponse *col_list = etebase_collection_manager_list(col_mgr, NULL);
+        EtebaseCollectionListResponse *col_list = etebase_collection_manager_list(col_mgr, COL_TYPE, NULL);
         fail_if(!col_list);
         assert_int_ne(0, etebase_collection_list_response_get_data_length(col_list));
 
@@ -140,7 +150,7 @@ test_simple() {
         etebase_fetch_options_set_stoken(fetch_options, etebase_collection_list_response_get_stoken(col_list));
 
         etebase_collection_list_response_destroy(col_list);
-        col_list = etebase_collection_manager_list(col_mgr, fetch_options);
+        col_list = etebase_collection_manager_list(col_mgr, COL_TYPE, fetch_options);
         assert_int_eq(0, etebase_collection_list_response_get_data_length(col_list));
 
         etebase_fetch_options_destroy(fetch_options);
@@ -245,9 +255,10 @@ test_item_deps() {
     etebase_account_fetch_token(etebase);
 
     EtebaseCollectionManager *col_mgr = etebase_account_get_collection_manager(etebase);
-    EtebaseCollectionMetadata *col_meta = etebase_collection_metadata_new("Type", "Name");
-    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, col_meta, "", 0);
-    etebase_collection_metadata_destroy(col_meta);
+    EtebaseItemMetadata *col_meta = etebase_item_metadata_new();
+    etebase_item_metadata_set_name(col_meta, "Name");
+    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, COL_TYPE, col_meta, "", 0);
+    etebase_item_metadata_destroy(col_meta);
 
     etebase_collection_manager_upload(col_mgr, col, NULL);
 
@@ -332,7 +343,7 @@ test_bad_auth() {
 
     EtebaseCollectionManager *col_mgr = etebase_account_get_collection_manager(etebase);
 
-    EtebaseCollectionListResponse *col_list = etebase_collection_manager_list(col_mgr, NULL);
+    EtebaseCollectionListResponse *col_list = etebase_collection_manager_list(col_mgr, COL_TYPE, NULL);
     fail_if(col_list);
     assert_int_eq(ETEBASE_ERROR_CODE_UNAUTHORIZED, etebase_error_get_code());
 
@@ -351,9 +362,10 @@ test_collection_transactions() {
     etebase_account_fetch_token(etebase);
 
     EtebaseCollectionManager *col_mgr = etebase_account_get_collection_manager(etebase);
-    EtebaseCollectionMetadata *col_meta = etebase_collection_metadata_new("Type", "Name");
-    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, col_meta, "", 0);
-    etebase_collection_metadata_destroy(col_meta);
+    EtebaseItemMetadata *col_meta = etebase_item_metadata_new();
+    etebase_item_metadata_set_name(col_meta, "Name");
+    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, COL_TYPE, col_meta, "", 0);
+    etebase_item_metadata_destroy(col_meta);
 
     etebase_collection_manager_upload(col_mgr, col, NULL);
 
@@ -366,10 +378,10 @@ test_collection_transactions() {
         {
             // -> On device B:
             EtebaseCollection *col = etebase_collection_manager_fetch(col_mgr, col_uid, NULL);
-            EtebaseCollectionMetadata *col_meta = etebase_collection_get_meta(col);
-            etebase_collection_metadata_set_name(col_meta, "New name");
+            EtebaseItemMetadata *col_meta = etebase_collection_get_meta(col);
+            etebase_item_metadata_set_name(col_meta, "New name");
             etebase_collection_set_meta(col, col_meta);
-            etebase_collection_metadata_destroy(col_meta);
+            etebase_item_metadata_destroy(col_meta);
 
             etebase_collection_manager_upload(col_mgr, col, NULL);
 
@@ -378,10 +390,10 @@ test_collection_transactions() {
 
 
         // -> On device A (using the previously saved collection)
-        EtebaseCollectionMetadata *col_meta = etebase_collection_get_meta(col);
-        etebase_collection_metadata_set_name(col_meta, "Another name");
+        EtebaseItemMetadata *col_meta = etebase_collection_get_meta(col);
+        etebase_item_metadata_set_name(col_meta, "Another name");
         etebase_collection_set_meta(col, col_meta);
-        etebase_collection_metadata_destroy(col_meta);
+        etebase_item_metadata_destroy(col_meta);
 
         // Will fail
         fail_if(!etebase_collection_manager_transaction(col_mgr, col, NULL));
@@ -418,10 +430,10 @@ test_collection_transactions() {
         }
 
         // -> On device A (using the previously saved collection)
-        EtebaseCollectionMetadata *col_meta = etebase_collection_get_meta(col);
-        etebase_collection_metadata_set_name(col_meta, "Another name");
+        EtebaseItemMetadata *col_meta = etebase_collection_get_meta(col);
+        etebase_item_metadata_set_name(col_meta, "Another name");
         etebase_collection_set_meta(col, col_meta);
-        etebase_collection_metadata_destroy(col_meta);
+        etebase_item_metadata_destroy(col_meta);
 
         // Will both fail
         EtebaseFetchOptions *fetch_options = etebase_fetch_options_new();
@@ -455,9 +467,10 @@ test_items_transactions() {
     etebase_account_fetch_token(etebase);
 
     EtebaseCollectionManager *col_mgr = etebase_account_get_collection_manager(etebase);
-    EtebaseCollectionMetadata *col_meta = etebase_collection_metadata_new("Type", "Name");
-    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, col_meta, "", 0);
-    etebase_collection_metadata_destroy(col_meta);
+    EtebaseItemMetadata *col_meta = etebase_item_metadata_new();
+    etebase_item_metadata_set_name(col_meta, "Name");
+    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, COL_TYPE, col_meta, "", 0);
+    etebase_item_metadata_destroy(col_meta);
 
     etebase_collection_manager_upload(col_mgr, col, NULL);
 
@@ -620,9 +633,10 @@ test_collection_as_item() {
     etebase_account_fetch_token(etebase);
 
     EtebaseCollectionManager *col_mgr = etebase_account_get_collection_manager(etebase);
-    EtebaseCollectionMetadata *col_meta = etebase_collection_metadata_new("Type", "Name");
-    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, col_meta, "", 0);
-    etebase_collection_metadata_destroy(col_meta);
+    EtebaseItemMetadata *col_meta = etebase_item_metadata_new();
+    etebase_item_metadata_set_name(col_meta, "Name");
+    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, COL_TYPE, col_meta, "", 0);
+    etebase_item_metadata_destroy(col_meta);
 
     etebase_collection_manager_upload(col_mgr, col, NULL);
 
@@ -690,9 +704,10 @@ test_item_revisions() {
     etebase_account_fetch_token(etebase);
 
     EtebaseCollectionManager *col_mgr = etebase_account_get_collection_manager(etebase);
-    EtebaseCollectionMetadata *col_meta = etebase_collection_metadata_new("Type", "Name");
-    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, col_meta, "", 0);
-    etebase_collection_metadata_destroy(col_meta);
+    EtebaseItemMetadata *col_meta = etebase_item_metadata_new();
+    etebase_item_metadata_set_name(col_meta, "Name");
+    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, COL_TYPE, col_meta, "", 0);
+    etebase_item_metadata_destroy(col_meta);
 
     etebase_collection_manager_upload(col_mgr, col, NULL);
 
@@ -752,9 +767,10 @@ test_basic_invitations() {
     etebase_account_fetch_token(etebase);
 
     EtebaseCollectionManager *col_mgr = etebase_account_get_collection_manager(etebase);
-    EtebaseCollectionMetadata *col_meta = etebase_collection_metadata_new("Type", "Name");
-    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, col_meta, "", 0);
-    etebase_collection_metadata_destroy(col_meta);
+    EtebaseItemMetadata *col_meta = etebase_item_metadata_new();
+    etebase_item_metadata_set_name(col_meta, "Name");
+    EtebaseCollection *col = etebase_collection_manager_create(col_mgr, COL_TYPE, col_meta, "", 0);
+    etebase_item_metadata_destroy(col_meta);
 
     etebase_collection_manager_upload(col_mgr, col, NULL);
 

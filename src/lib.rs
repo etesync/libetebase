@@ -16,7 +16,6 @@ use etebase::{
     Account,
 
     Collection,
-    CollectionMetadata,
     Item,
     ItemMetadata,
 
@@ -703,117 +702,6 @@ pub unsafe extern fn etebase_fetch_options_destroy(this: *mut FetchOptions) {
 // }
 
 
-// Class CollectionMetadata {
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_new(type_: *const c_char, name: *const c_char) -> *mut CollectionMetadata {
-    let type_ = CStr::from_ptr(type_).to_str().unwrap();
-    let name = CStr::from_ptr(name).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            CollectionMetadata::new(type_, name)
-        )
-    )
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_set_collection_type(this: &mut CollectionMetadata, collection_type: *const c_char) {
-    let collection_type = CStr::from_ptr(collection_type).to_str().unwrap();
-    this.set_collection_type(collection_type);
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_get_collection_type(this: &CollectionMetadata) -> *const c_char {
-    thread_local! {
-        static LAST: RefCell<Option<CString>> = RefCell::new(None);
-    }
-    LAST.with(|ret| {
-        *ret.borrow_mut() = CString::new(this.collection_type()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
-    })
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_set_name(this: &mut CollectionMetadata, name: *const c_char) {
-    let name = CStr::from_ptr(name).to_str().unwrap();
-    this.set_name(name);
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_get_name(this: &CollectionMetadata) -> *const c_char {
-    thread_local! {
-        static LAST: RefCell<Option<CString>> = RefCell::new(None);
-    }
-    LAST.with(|ret| {
-        *ret.borrow_mut() = CString::new(this.name()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
-    })
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_set_description(this: &mut CollectionMetadata, description: *const c_char) {
-    let description = ptr_to_option(description).map(|x| CStr::from_ptr(x).to_str().unwrap());
-    this.set_description(description);
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_get_description(this: &CollectionMetadata) -> *const c_char {
-    thread_local! {
-        static LAST: RefCell<Option<CString>> = RefCell::new(None);
-    }
-    LAST.with(|ret| {
-        *ret.borrow_mut() = this.description().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
-    })
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_set_color(this: &mut CollectionMetadata, color: *const c_char) {
-    let color = ptr_to_option(color).map(|x| CStr::from_ptr(x).to_str().unwrap());
-    this.set_color(color);
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_get_color(this: &CollectionMetadata) -> *const c_char {
-    thread_local! {
-        static LAST: RefCell<Option<CString>> = RefCell::new(None);
-    }
-    LAST.with(|ret| {
-        *ret.borrow_mut() = this.color().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
-    })
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_set_mtime(this: &mut CollectionMetadata, mtime: *const i64) {
-    let mtime = if mtime.is_null() {
-        None
-    } else {
-        Some(*mtime)
-    };
-    this.set_mtime(mtime);
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_get_mtime(this: &CollectionMetadata) -> *const i64 {
-    thread_local! {
-        static LAST: RefCell<Option<i64>> = RefCell::new(None);
-    }
-    LAST.with(|ret| {
-        *ret.borrow_mut() = this.mtime();
-        ret.borrow().as_ref().map(|x| x as *const i64).unwrap_or(std::ptr::null())
-    })
-}
-
-#[no_mangle]
-pub unsafe extern fn etebase_collection_metadata_destroy(this: *mut CollectionMetadata) {
-    let this = Box::from_raw(this);
-    drop(this);
-}
-
-// }
-
-
 // Class ItemMetadata {
 
 #[no_mangle]
@@ -881,6 +769,40 @@ pub unsafe extern fn etebase_item_metadata_get_mtime(this: &ItemMetadata) -> *co
 }
 
 #[no_mangle]
+pub unsafe extern fn etebase_item_metadata_set_description(this: &mut ItemMetadata, description: *const c_char) {
+    let description = ptr_to_option(description).map(|x| CStr::from_ptr(x).to_str().unwrap());
+    this.set_description(description);
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_item_metadata_get_description(this: &ItemMetadata) -> *const c_char {
+    thread_local! {
+        static LAST: RefCell<Option<CString>> = RefCell::new(None);
+    }
+    LAST.with(|ret| {
+        *ret.borrow_mut() = this.description().map(|x| CString::new(x).unwrap());
+        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+    })
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_item_metadata_set_color(this: &mut ItemMetadata, color: *const c_char) {
+    let color = ptr_to_option(color).map(|x| CStr::from_ptr(x).to_str().unwrap());
+    this.set_color(color);
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_item_metadata_get_color(this: &ItemMetadata) -> *const c_char {
+    thread_local! {
+        static LAST: RefCell<Option<CString>> = RefCell::new(None);
+    }
+    LAST.with(|ret| {
+        *ret.borrow_mut() = this.color().map(|x| CString::new(x).unwrap());
+        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+    })
+}
+
+#[no_mangle]
 pub unsafe extern fn etebase_item_metadata_destroy(this: *mut ItemMetadata) {
     let this = Box::from_raw(this);
     drop(this);
@@ -903,22 +825,24 @@ pub unsafe extern fn etebase_collection_manager_fetch(this: &CollectionManager, 
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_create(this: &CollectionManager, meta: &CollectionMetadata, content: *const c_void, content_size: usize) -> *mut Collection {
+pub unsafe extern fn etebase_collection_manager_create(this: &CollectionManager, collection_type: *const c_char, meta: &ItemMetadata, content: *const c_void, content_size: usize) -> *mut Collection {
+    let collection_type = CStr::from_ptr(collection_type).to_str().unwrap();
     let content = std::slice::from_raw_parts(content as *const u8, content_size);
     Box::into_raw(
         Box::new(
-            try_or_null!(this.create(meta, content))
+            try_or_null!(this.create(collection_type, meta, content))
         )
     )
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_create_raw(this: &CollectionManager, meta: *const c_void, meta_size: usize, content: *const c_void, content_size: usize) -> *mut Collection {
+pub unsafe extern fn etebase_collection_manager_create_raw(this: &CollectionManager, collection_type: *const c_char, meta: *const c_void, meta_size: usize, content: *const c_void, content_size: usize) -> *mut Collection {
+    let collection_type = CStr::from_ptr(collection_type).to_str().unwrap();
     let meta = std::slice::from_raw_parts(meta as *const u8, meta_size);
     let content = std::slice::from_raw_parts(content as *const u8, content_size);
     Box::into_raw(
         Box::new(
-            try_or_null!(this.create_raw(meta, content))
+            try_or_null!(this.create_raw(collection_type, meta, content))
         )
     )
 }
@@ -933,11 +857,23 @@ pub unsafe extern fn etebase_collection_manager_get_item_manager(this: &Collecti
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_list(this: &CollectionManager, fetch_options: Option<&FetchOptions>) -> *mut CollectionListResponse {
+pub unsafe extern fn etebase_collection_manager_list(this: &CollectionManager, collection_type: *const c_char, fetch_options: Option<&FetchOptions>) -> *mut CollectionListResponse {
+    let collection_type = CStr::from_ptr(collection_type).to_str().unwrap();
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
     Box::into_raw(
         Box::new(
-            try_or_null!(this.list(fetch_options.as_ref()))
+            try_or_null!(this.list(collection_type, fetch_options.as_ref()))
+        )
+    )
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_collection_manager_list_multi(this: &CollectionManager, collection_types: *const *const c_char, collection_types_size: usize, fetch_options: Option<&FetchOptions>) -> *mut CollectionListResponse {
+    let collection_types = std::slice::from_raw_parts(collection_types, collection_types_size).into_iter().map(|x| CStr::from_ptr(*x).to_str().unwrap());
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    Box::into_raw(
+        Box::new(
+            try_or_null!(this.list_multi(collection_types, fetch_options.as_ref()))
         )
     )
 }
@@ -1167,13 +1103,13 @@ pub unsafe extern fn etebase_collection_verify(this: &Collection) -> bool {
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_collection_set_meta(this: &mut Collection, meta: &CollectionMetadata) -> i32 {
+pub unsafe extern fn etebase_collection_set_meta(this: &mut Collection, meta: &ItemMetadata) -> i32 {
     try_or_int!(this.set_meta(meta));
     0
 }
 
 #[no_mangle]
-pub unsafe extern fn etebase_collection_get_meta(this: &Collection) -> *mut CollectionMetadata {
+pub unsafe extern fn etebase_collection_get_meta(this: &Collection) -> *mut ItemMetadata {
     Box::into_raw(
         Box::new(
             try_or_null!(this.meta())
@@ -1266,6 +1202,11 @@ pub unsafe extern fn etebase_collection_as_item(this: &Collection) -> *mut Item 
             try_or_null!(this.item())
         )
     )
+}
+
+#[no_mangle]
+pub unsafe extern fn etebase_collection_get_collection_type(this: &Collection) -> *mut c_char {
+    CString::new(try_or_null!(this.collection_type())).unwrap().into_raw()
 }
 
 #[no_mangle]
