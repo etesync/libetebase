@@ -473,6 +473,12 @@ test_items_transactions() {
     etebase_item_metadata_destroy(col_meta);
 
     etebase_collection_manager_upload(col_mgr, col, NULL);
+    char *stoken;
+    {
+        EtebaseCollection *col2 = etebase_collection_manager_fetch(col_mgr, etebase_collection_get_uid(col), NULL);
+        stoken = strdup(etebase_collection_get_stoken(col2));
+        etebase_collection_destroy(col2);
+    }
 
     EtebaseItemManager *item_mgr = etebase_collection_manager_get_item_manager(col_mgr, col);
 
@@ -531,7 +537,6 @@ test_items_transactions() {
     {
         // -> On device A:
         EtebaseItem *item = etebase_item_manager_fetch(item_mgr, item_uid, NULL);
-        const char *stoken = etebase_collection_get_stoken(col);
 
         {
             // -> On device B:
@@ -611,6 +616,8 @@ test_items_transactions() {
 
     free(item2_uid);
     free(item1_uid);
+
+    free(stoken);
 
     etebase_account_logout(etebase);
 
