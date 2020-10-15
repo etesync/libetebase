@@ -326,7 +326,7 @@ test_bad_auth() {
     {
         EtebaseAccount *etebase = etebase_account_login(client, "non-existent", "passward");
         fail_if(etebase);
-        assert_int_eq(ETEBASE_ERROR_CODE_NOT_FOUND, etebase_error_get_code());
+        assert_int_eq(ETEBASE_ERROR_CODE_UNAUTHORIZED, etebase_error_get_code());
     }
     {
         EtebaseAccount *etebase = etebase_account_login(client, "test_user", "bad-passward");
