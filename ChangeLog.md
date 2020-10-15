@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.3.0
+* Login: automatically create the account if not init
+* Have global and immutable collection types (changes the create and list APIs)
+* Update etebase dependency
+
 ## Version 0.2.0
 * Expose a function to fetch the dashboard url of an account
 * Expose the FileSystemCache module for caching the data locally
