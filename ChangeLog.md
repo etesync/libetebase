@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.3.1
+* Fix issue with custom urls lacking a trailing slash
+* Update etebase dependency
+
 ## Version 0.3.0
 * Login: automatically create the account if not init
 * Have global and immutable collection types (changes the create and list APIs)
