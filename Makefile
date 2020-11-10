@@ -24,7 +24,7 @@ all: build
 pkgconfig: $(PKGCONFIG_FILE)
 
 $(PKGCONFIG_FILE): $(PKGNAME).pc.in
-	mkdir -p $(BUILDDIR)
+	mkdir -p "$(BUILDDIR)"
 	sed "s#@prefix@#$(PREFIX)#g" $< > "$(BUILDDIR)/$(PKGNAME).pc"
 
 build-release: pkgconfig
@@ -36,10 +36,10 @@ build-debug: pkgconfig
 build: build-$(MODE)
 
 install:
-	install -Dm644 $(PKGCONFIG_FILE) -t $(DST_PKGCONFIG_DIR)
-	install -Dm644 $(CMAKECONFIG_FILE) -t $(DST_CMAKECONFIG_DIR)
-	install -Dm644 $(HEADER_FILE) -t $(DST_INCLUDE_DIR)
-	install -Dm755 $(LIBRARY_FILE) -t $(DST_LIBRARY_DIR)
+	install -Dm644 "$(PKGCONFIG_FILE)" -t "$(DST_PKGCONFIG_DIR)"
+	install -Dm644 "$(CMAKECONFIG_FILE)" -t "$(DST_CMAKECONFIG_DIR)"
+	install -Dm644 "$(HEADER_FILE)" -t "$(DST_INCLUDE_DIR)"
+	install -Dm755 "$(LIBRARY_FILE)" -t "$(DST_LIBRARY_DIR)"
 
 check: build
 	cargo check
@@ -48,4 +48,4 @@ check: build
 clean:
 	cargo clean
 	cd c_tests && $(MAKE) clean
-	rm -f $(BUILDDIR)/$(PKGNAME).pc
+	rm -f "$(BUILDDIR)/$(PKGNAME).p"c
