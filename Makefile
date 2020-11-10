@@ -1,5 +1,5 @@
 PREFIX ?= /usr
-DESTDIR ?= /
+DESTDIR ?=
 # Set MODE to release to build with release
 MODE ?= debug
 
