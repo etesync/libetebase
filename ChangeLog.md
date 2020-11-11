@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.4.0
+* Relicense to BSD-3-Clause
+* Improve Makefile
+* Set SONAME for the library on Unix-like systems
+
 ## Version 0.3.1
 * Fix issue with custom urls lacking a trailing slash
 * Update etebase dependency
