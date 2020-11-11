@@ -79,7 +79,6 @@ fn update_last_error(err: Error) {
     });
 }
 
-#[no_mangle]
 #[repr(u32)]
 pub enum ErrorCode {
     NoError,
@@ -585,7 +584,6 @@ pub unsafe extern fn etebase_item_revisions_list_response_destroy(this: *mut Ite
 
 // Enum PrefetchOption {
 
-#[no_mangle]
 #[repr(u32)]
 pub enum PrefetchOption {
     Auto,
