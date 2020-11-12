@@ -9,7 +9,7 @@ This package is implemented in Rust and exposes a C API for people to use.
 
 ![GitHub tag](https://img.shields.io/github/tag/etesync/libetebase.svg)
 [![Build Status](https://travis-ci.com/etesync/libetebase.svg?branch=master)](https://travis-ci.com/etesync/libetebase)
-[![Chat on freenode](https://img.shields.io/badge/irc.freenode.net-%23EteSync-blue.svg)](https://webchat.freenode.net/?channels=#etesync)
+[![Chat with us](https://img.shields.io/badge/chat-IRC%20|%20Matrix%20|%20Web-blue.svg)](https://www.etebase.com/community-chat/)
 
 # Build
 
