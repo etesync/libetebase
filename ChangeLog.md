@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.4.1
+* Build the release version by default
+
 ## Version 0.4.0
 * Relicense to BSD-3-Clause
 * Improve Makefile
