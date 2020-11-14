@@ -1,7 +1,7 @@
 PREFIX ?= /usr
 DESTDIR ?=
-# Set MODE to release to build with release
-MODE ?= debug
+# Set MODE to debug to build in debug mode
+MODE ?= release
 
 PKGNAME = etebase
 
