@@ -830,6 +830,9 @@ impl FetchOptions {
     }
 }
 
+/// Return a new fetch options object
+///
+/// Should be destroyed with `etebase_fetch_options_destroy`
 #[no_mangle]
 pub unsafe extern fn etebase_fetch_options_new() -> *mut FetchOptions {
     Box::into_raw(
@@ -1236,6 +1239,10 @@ pub unsafe extern fn etebase_collection_manager_cache_save_with_content(this: &C
     ret_raw
 }
 
+/// Return the collection member manager for the supplied collection
+///
+/// @param this_ the object handle
+/// @param col the collection for which the manager is required
 #[no_mangle]
 pub unsafe extern fn etebase_collection_manager_get_member_manager(this: &CollectionManager, col: &Collection) -> *mut CollectionMemberManager {
     Box::into_raw(
@@ -2001,6 +2008,14 @@ pub unsafe extern fn etebase_invitation_manager_fetch_user_profile(this: &Collec
     )
 }
 
+/// Invite a user to a collection
+///
+/// @param this_ the object handle
+/// @param collection the collection to invite to
+/// @param username the username of the user to invite
+/// @param pubkey the public key of the user to invite
+/// @param pubkey_size the size of the public key
+/// @param access_level the level of access to give to user
 #[no_mangle]
 pub unsafe extern fn etebase_invitation_manager_invite(this: &CollectionInvitationManager, collection: &Collection, username: *const c_char, pubkey: *const c_void, pubkey_size: usize, access_level: CollectionAccessLevel) -> i32 {
     let username = CStr::from_ptr(username).to_str().unwrap();
