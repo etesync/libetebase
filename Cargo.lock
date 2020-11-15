@@ -187,8 +187,9 @@ dependencies = [
 
 [[package]]
 name = "etebase"
-version = "0.1.0"
-source = "git+https://github.com/etesync/etebase-rs?rev=b3aad3e01fd602f3547e0af82d3bf1b5701b79a2#b3aad3e01fd602f3547e0af82d3bf1b5701b79a2"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8240899208bc7686eb39e3210401a6dc9f8928a5dfb7092d93025ff1616939be"
 dependencies = [
  "libsodium-sys",
  "remove_dir_all 0.6.0",
