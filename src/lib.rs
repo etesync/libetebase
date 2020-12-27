@@ -1369,6 +1369,25 @@ pub unsafe extern fn etebase_item_manager_fetch_updates(this: &ItemManager, item
     )
 }
 
+/// Fetch multiple Items using their UID
+///
+/// See etebase_item_manager_fetch for fetching a single item
+///
+/// @param this_ the object handle
+/// @param items the list of item uids to be fetched
+/// @param items_size the number of items
+/// @param fetch_options the `EtebaseFetchOptions` to fetch with
+#[no_mangle]
+pub unsafe extern fn etebase_item_manager_fetch_multi(this: &ItemManager, items: *const *const c_char, items_size: usize, fetch_options: Option<&FetchOptions>) -> *mut ItemListResponse {
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    let items = std::slice::from_raw_parts(items, items_size).into_iter().map(|x| CStr::from_ptr(*x).to_str().unwrap());
+    Box::into_raw(
+        Box::new(
+            try_or_null!(this.fetch_multi(items, fetch_options.as_ref()))
+        )
+    )
+}
+
 /// Upload the supplied items to the server
 ///
 /// @param this_ the object handle
