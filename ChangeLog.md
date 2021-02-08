@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.5.0
+* Document all of the API
+* Add fetch_multi te fetch items by UIDs
+
 ## Version 0.4.1
 * Build the release version by default
 
