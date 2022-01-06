@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.5.1
+* Update to the latest etebase-rs release
+
 ## Version 0.5.0
 * Document all of the API
 * Add fetch_multi te fetch items by UIDs
