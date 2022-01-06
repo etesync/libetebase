@@ -264,6 +264,27 @@ pub unsafe extern fn etebase_client_new(client_name: *const c_char, server_url: 
     )
 }
 
+#[allow(non_snake_case)]
+#[no_mangle]
+unsafe extern "C" fn vec_u8_from_size(size: u32) -> *mut Vec<u8> {
+    let vec = Vec::with_capacity(size as usize);
+    return Box::into_raw(Box::new(vec));
+}
+
+#[allow(non_snake_case)]
+#[no_mangle]
+unsafe extern "C" fn vec_u8_size(vec: &mut Vec<u8>) -> u32 {
+    return vec.len() as u32;
+}
+
+#[allow(non_snake_case)]
+#[no_mangle]
+unsafe extern "C" fn vec_u8_buf(vec: &mut Vec<u8>) -> *const u8 {
+    let ret = vec.as_ptr();
+    return ret;
+}
+
+
 #[no_mangle]
 pub unsafe extern fn etebase_client_set_server_url(this: &mut Client, server_url: *const c_char) -> i32 {
     let server_url = CStr::from_ptr(server_url).to_str().unwrap();
