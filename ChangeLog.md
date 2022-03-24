@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.5.2
+* Update openssl deps to support more recent libopenssl vesrions
+
 ## Version 0.5.1
 * Update to the latest etebase-rs release
 
