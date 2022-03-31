@@ -17,4 +17,4 @@ crate-type = ["cdylib"]
 cbindgen = "^0.14.2"
 
 [dependencies]
-etebase = "^0.5.1"
+etebase = "^0.5.3"
