@@ -2030,7 +2030,7 @@ pub unsafe extern fn etebase_invitation_manager_accept(this: &CollectionInvitati
 /// @param invitation the invitation to reject
 #[no_mangle]
 pub unsafe extern fn etebase_invitation_manager_reject(this: &CollectionInvitationManager, invitation: &SignedInvitation) -> i32 {
-    try_or_int!(this.accept(invitation));
+    try_or_int!(this.reject(invitation));
     0
 }
 
