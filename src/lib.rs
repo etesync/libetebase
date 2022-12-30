@@ -223,9 +223,9 @@ pub unsafe extern fn etebase_utils_randombytes(buf: *mut c_void, size: usize) ->
 #[no_mangle]
 pub static ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE: usize =
     1 + // Null
-    4 + // Newlines
-    (3 * 12) + // Spacing
-    (5 * 16); // Digits
+    2 + // Newlines
+    (3 * 9) + // Spacing
+    (5 * 12); // Digits
 
 /// Return a pretty formatted fingerprint of the content
 ///
