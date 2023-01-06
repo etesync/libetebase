@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 0.5.4
+* Fix invitation reject to actually reject (and not accept)
+* Fix wrong value for ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE
+* Improve macOS support
+
+## Version 0.5.3
+* Update deps to their latest versions
+
 ## Version 0.5.2
 * Update openssl deps to support more recent libopenssl vesrions
 
