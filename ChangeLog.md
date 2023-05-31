@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.5.5
+* Update to the latest etebase-rs release
+
 ## Version 0.5.4
 * Fix invitation reject to actually reject (and not accept)
 * Fix wrong value for ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE
