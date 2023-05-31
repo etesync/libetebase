@@ -4,37 +4,18 @@
 #![allow(non_camel_case_types)]
 
 use std::cell::RefCell;
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
-use std::ffi::{CString, CStr};
 use std::path::PathBuf;
 
 use etebase::{
-    DEFAULT_SERVER_URL,
-
-    Client,
-    User,
-    Account,
-
-    Collection,
-    Item,
-    ItemMetadata,
-
-    CollectionAccessLevel,
-    SignedInvitation,
-    CollectionMember,
-    RemovedCollection,
-
-    UserProfile,
-
-    fs_cache::FileSystemCache,
-
     error::Error,
+    fs_cache::FileSystemCache,
     managers::{
-        CollectionManager,
-        ItemManager,
-        CollectionInvitationManager,
-        CollectionMemberManager,
+        CollectionInvitationManager, CollectionManager, CollectionMemberManager, ItemManager,
     },
+    Account, Client, Collection, CollectionAccessLevel, CollectionMember, Item, ItemMetadata,
+    RemovedCollection, SignedInvitation, User, UserProfile, DEFAULT_SERVER_URL,
 };
 
 macro_rules! try_or_null {
@@ -45,7 +26,7 @@ macro_rules! try_or_null {
                 update_last_error(Error::from(err));
                 return std::ptr::null_mut();
             }
-        };
+        }
     };
 }
 
@@ -57,7 +38,7 @@ macro_rules! try_or_int {
                 update_last_error(Error::from(err));
                 return -1;
             }
-        };
+        }
     };
 }
 
@@ -106,30 +87,28 @@ pub enum ErrorCode {
 ///
 /// Call this immediately after a failed API call
 #[no_mangle]
-pub extern fn etebase_error_get_code() -> ErrorCode {
-    LAST_ERROR.with(|prev| {
-        match *prev.borrow() {
-            Some(ref err) => match err {
-                Error::Generic(_) => ErrorCode::Generic,
-                Error::UrlParse(_) => ErrorCode::UrlParse,
-                Error::MsgPack(_) => ErrorCode::MsgPack,
-                Error::ProgrammingError(_) => ErrorCode::ProgrammingError,
-                Error::MissingContent(_) => ErrorCode::MissingContent,
-                Error::Padding(_) => ErrorCode::Padding,
-                Error::Base64(_) => ErrorCode::Base64,
-                Error::Encryption(_) => ErrorCode::Encryption,
-                Error::Unauthorized(_) => ErrorCode::Unauthorized,
-                Error::Conflict(_) => ErrorCode::Conflict,
-                Error::PermissionDenied(_) => ErrorCode::PermissionDenied,
-                Error::NotFound(_) => ErrorCode::NotFound,
+pub extern "C" fn etebase_error_get_code() -> ErrorCode {
+    LAST_ERROR.with(|prev| match *prev.borrow() {
+        Some(ref err) => match err {
+            Error::Generic(_) => ErrorCode::Generic,
+            Error::UrlParse(_) => ErrorCode::UrlParse,
+            Error::MsgPack(_) => ErrorCode::MsgPack,
+            Error::ProgrammingError(_) => ErrorCode::ProgrammingError,
+            Error::MissingContent(_) => ErrorCode::MissingContent,
+            Error::Padding(_) => ErrorCode::Padding,
+            Error::Base64(_) => ErrorCode::Base64,
+            Error::Encryption(_) => ErrorCode::Encryption,
+            Error::Unauthorized(_) => ErrorCode::Unauthorized,
+            Error::Conflict(_) => ErrorCode::Conflict,
+            Error::PermissionDenied(_) => ErrorCode::PermissionDenied,
+            Error::NotFound(_) => ErrorCode::NotFound,
 
-                Error::Connection(_) => ErrorCode::Connection,
-                Error::TemporaryServerError(_) => ErrorCode::TemporaryServerError,
-                Error::ServerError(_) => ErrorCode::ServerError,
-                Error::Http(_) => ErrorCode::Http,
-            },
-            None => ErrorCode::NoError,
-        }
+            Error::Connection(_) => ErrorCode::Connection,
+            Error::TemporaryServerError(_) => ErrorCode::TemporaryServerError,
+            Error::ServerError(_) => ErrorCode::ServerError,
+            Error::Http(_) => ErrorCode::Http,
+        },
+        None => ErrorCode::NoError,
     })
 }
 
@@ -137,21 +116,22 @@ pub extern fn etebase_error_get_code() -> ErrorCode {
 ///
 /// Call this immediately after a failed API call
 #[no_mangle]
-pub extern fn etebase_error_get_message() -> *const c_char {
+pub extern "C" fn etebase_error_get_message() -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
-    LAST_ERROR.with(|prev| {
-        match *prev.borrow() {
-            Some(ref err) => {
-                let err = CString::new(err.to_string()).ok();
-                LAST.with(|ret| {
-                    *ret.borrow_mut() = err;
-                    ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
-                })
-            },
-            None => std::ptr::null(),
+    LAST_ERROR.with(|prev| match *prev.borrow() {
+        Some(ref err) => {
+            let err = CString::new(err.to_string()).ok();
+            LAST.with(|ret| {
+                *ret.borrow_mut() = err;
+                ret.borrow()
+                    .as_ref()
+                    .map(|x| x.as_ptr())
+                    .unwrap_or(std::ptr::null())
+            })
         }
+        None => std::ptr::null(),
     })
 }
 
@@ -159,13 +139,16 @@ pub extern fn etebase_error_get_message() -> *const c_char {
 
 /// The URL of the main hosted server
 #[no_mangle]
-pub extern fn etebase_get_default_server_url() -> *const c_char {
+pub extern "C" fn etebase_get_default_server_url() -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(DEFAULT_SERVER_URL).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -176,11 +159,18 @@ pub extern fn etebase_get_default_server_url() -> *const c_char {
 /// @param buf_maxlen the maximum number of bytes to be written to buf
 /// @param[out] buf_len variable to store the buffer length in
 #[no_mangle]
-pub unsafe extern fn etebase_utils_from_base64(string: *const c_char, buf: *mut c_void, buf_maxlen: usize, buf_len: *mut usize) -> i32 {
+pub unsafe extern "C" fn etebase_utils_from_base64(
+    string: *const c_char,
+    buf: *mut c_void,
+    buf_maxlen: usize,
+    buf_len: *mut usize,
+) -> i32 {
     let string = CStr::from_ptr(string).to_str().unwrap();
     let buf_inner = try_or_int!(etebase::utils::from_base64(string));
     if buf_inner.len() > buf_maxlen {
-        try_or_int!(Err(Error::ProgrammingError("buf_maxlen is too small for output")));
+        try_or_int!(Err(Error::ProgrammingError(
+            "buf_maxlen is too small for output"
+        )));
         return -1; // Never actually called, try_or_int returns already.
     }
     buf.copy_from_nonoverlapping(buf_inner.as_ptr() as *const c_void, buf_inner.len());
@@ -197,15 +187,22 @@ pub unsafe extern fn etebase_utils_from_base64(string: *const c_char, buf: *mut 
 /// @param[out] out the output string
 /// @param out_maxlen the maximum length of string to be written
 #[no_mangle]
-pub unsafe extern fn etebase_utils_to_base64(bytes: *const c_void, bytes_size: usize, out: *mut c_char, out_maxlen: usize) -> i32 {
+pub unsafe extern "C" fn etebase_utils_to_base64(
+    bytes: *const c_void,
+    bytes_size: usize,
+    out: *mut c_char,
+    out_maxlen: usize,
+) -> i32 {
     let bytes = std::slice::from_raw_parts(bytes as *const u8, bytes_size);
     let b64 = try_or_int!(etebase::utils::to_base64(bytes));
     if b64.len() > out_maxlen {
-        try_or_int!(Err(Error::ProgrammingError("out_maxlen is too small for output")));
+        try_or_int!(Err(Error::ProgrammingError(
+            "out_maxlen is too small for output"
+        )));
         return -1; // Never actually called, try_or_int returns already.
     }
     out.copy_from_nonoverlapping(b64.as_ptr() as *const c_char, b64.len());
-    *out.offset(b64.len() as isize) = 0;
+    *out.add(b64.len()) = 0;
     0
 }
 
@@ -214,15 +211,14 @@ pub unsafe extern fn etebase_utils_to_base64(bytes: *const c_void, bytes_size: u
 /// @param[out] buf the output byte buffer
 /// @param size the size of the returned buffer
 #[no_mangle]
-pub unsafe extern fn etebase_utils_randombytes(buf: *mut c_void, size: usize) -> i32 {
+pub unsafe extern "C" fn etebase_utils_randombytes(buf: *mut c_void, size: usize) -> i32 {
     let bytes = etebase::utils::randombytes(size);
     buf.copy_from_nonoverlapping(bytes.as_ptr() as *const c_void, size);
     0
 }
 
 #[no_mangle]
-pub static ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE: usize =
-    1 + // Null
+pub static ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE: usize = 1 + // Null
     2 + // Newlines
     (3 * 9) + // Spacing
     (5 * 12); // Digits
@@ -240,53 +236,59 @@ pub static ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE: usize =
 /// @param content_size the size of the content buffer
 /// @param[out] buf the output byte buffer
 #[no_mangle]
-pub unsafe extern fn etebase_utils_pretty_fingerprint(content: *const c_void, content_size: usize, buf: *mut c_char) -> i32 {
+pub unsafe extern "C" fn etebase_utils_pretty_fingerprint(
+    content: *const c_void,
+    content_size: usize,
+    buf: *mut c_char,
+) -> i32 {
     let content = std::slice::from_raw_parts(content as *const u8, content_size);
     let fingerprint = etebase::pretty_fingerprint(content);
-    buf.copy_from_nonoverlapping(fingerprint.as_ptr() as *const c_char, ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE);
-    *buf.offset(ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE as isize) = 0;
+    buf.copy_from_nonoverlapping(
+        fingerprint.as_ptr() as *const c_char,
+        ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE,
+    );
+    *buf.add(ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE) = 0;
     0
 }
 
 // }
 
-
 // Class Client {
 
 #[no_mangle]
-pub unsafe extern fn etebase_client_new(client_name: *const c_char, server_url: *const c_char) -> *mut Client {
+pub unsafe extern "C" fn etebase_client_new(
+    client_name: *const c_char,
+    server_url: *const c_char,
+) -> *mut Client {
     let client_name = CStr::from_ptr(client_name).to_str().unwrap();
     let server_url = CStr::from_ptr(server_url).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            try_or_null!(Client::new(client_name, server_url))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(Client::new(client_name, server_url))))
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 unsafe extern "C" fn vec_u8_from_size(size: u32) -> *mut Vec<u8> {
     let vec = Vec::with_capacity(size as usize);
-    return Box::into_raw(Box::new(vec));
+    Box::into_raw(Box::new(vec))
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 unsafe extern "C" fn vec_u8_size(vec: &mut Vec<u8>) -> u32 {
-    return vec.len() as u32;
+    vec.len() as u32
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 unsafe extern "C" fn vec_u8_buf(vec: &mut Vec<u8>) -> *const u8 {
-    let ret = vec.as_ptr();
-    return ret;
+    vec.as_ptr()
 }
 
-
 #[no_mangle]
-pub unsafe extern fn etebase_client_set_server_url(this: &mut Client, server_url: *const c_char) -> i32 {
+pub unsafe extern "C" fn etebase_client_set_server_url(
+    this: &mut Client,
+    server_url: *const c_char,
+) -> i32 {
     let server_url = CStr::from_ptr(server_url).to_str().unwrap();
     try_or_int!(this.set_server_url(server_url));
     0
@@ -296,22 +298,25 @@ pub unsafe extern fn etebase_client_set_server_url(this: &mut Client, server_url
 ///
 /// @param client the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_client_check_etebase_server(client: &Client) -> i32 {
+pub unsafe extern "C" fn etebase_client_check_etebase_server(client: &Client) -> i32 {
     let ret = try_or_int!(Account::is_etebase_server(client));
-    if ret { 0 } else { 1 }
+    if ret {
+        0
+    } else {
+        1
+    }
 }
 
 /// Destroy the object
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_client_destroy(this: *mut Client) {
+pub unsafe extern "C" fn etebase_client_destroy(this: *mut Client) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class User {
 
@@ -322,14 +327,13 @@ pub unsafe extern fn etebase_client_destroy(this: *mut Client) {
 /// @param username the user's username
 /// @param email the user's email
 #[no_mangle]
-pub unsafe extern fn etebase_user_new(username: *const c_char, email: *const c_char) -> *mut User {
+pub unsafe extern "C" fn etebase_user_new(
+    username: *const c_char,
+    email: *const c_char,
+) -> *mut User {
     let username = CStr::from_ptr(username).to_str().unwrap();
     let email = CStr::from_ptr(email).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            User::new(username, email)
-        )
-    )
+    Box::into_raw(Box::new(User::new(username, email)))
 }
 
 /// Set the username
@@ -337,7 +341,7 @@ pub unsafe extern fn etebase_user_new(username: *const c_char, email: *const c_c
 /// @param this_ the object handle
 /// @param username the user's username
 #[no_mangle]
-pub unsafe extern fn etebase_user_set_username(this: &mut User, username: *const c_char) {
+pub unsafe extern "C" fn etebase_user_set_username(this: &mut User, username: *const c_char) {
     let username = CStr::from_ptr(username).to_str().unwrap();
     this.set_username(username);
 }
@@ -346,13 +350,16 @@ pub unsafe extern fn etebase_user_set_username(this: &mut User, username: *const
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_user_get_username(this: &User) -> *const c_char {
+pub unsafe extern "C" fn etebase_user_get_username(this: &User) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.username()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -361,7 +368,7 @@ pub unsafe extern fn etebase_user_get_username(this: &User) -> *const c_char {
 /// @param this_ the object handle
 /// @param email the user's email address
 #[no_mangle]
-pub unsafe extern fn etebase_user_set_email(this: &mut User, email: *const c_char) {
+pub unsafe extern "C" fn etebase_user_set_email(this: &mut User, email: *const c_char) {
     let email = CStr::from_ptr(email).to_str().unwrap();
     this.set_email(email);
 }
@@ -370,13 +377,16 @@ pub unsafe extern fn etebase_user_set_email(this: &mut User, email: *const c_cha
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_user_get_email(this: &User) -> *const c_char {
+pub unsafe extern "C" fn etebase_user_get_email(this: &User) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.email()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -384,13 +394,12 @@ pub unsafe extern fn etebase_user_get_email(this: &User) -> *const c_char {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_user_destroy(this: *mut User) {
+pub unsafe extern "C" fn etebase_user_destroy(this: *mut User) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class Account {
 
@@ -400,14 +409,18 @@ pub unsafe extern fn etebase_user_destroy(this: *mut User) {
 /// @param username the user's username. This is not the same as the user's email.
 /// @param password the user's password
 #[no_mangle]
-pub unsafe extern fn etebase_account_login(client: &Client, username: *const c_char, password: *const c_char) -> *mut Account {
+pub unsafe extern "C" fn etebase_account_login(
+    client: &Client,
+    username: *const c_char,
+    password: *const c_char,
+) -> *mut Account {
     let username = CStr::from_ptr(username).to_str().unwrap();
     let password = CStr::from_ptr(password).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            try_or_null!(Account::login(client.clone(), username, password))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(Account::login(
+        client.clone(),
+        username,
+        password
+    ))))
 }
 
 /// Signup a new user account and return a handle to it
@@ -416,20 +429,24 @@ pub unsafe extern fn etebase_account_login(client: &Client, username: *const c_c
 /// @param user the already setup `EtebaseUser` object
 /// @param password the password to signup with
 #[no_mangle]
-pub unsafe extern fn etebase_account_signup(client: &Client, user: &User, password: *const c_char) -> *mut Account {
+pub unsafe extern "C" fn etebase_account_signup(
+    client: &Client,
+    user: &User,
+    password: *const c_char,
+) -> *mut Account {
     let password = CStr::from_ptr(password).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            try_or_null!(Account::signup(client.clone(), user, password))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(Account::signup(
+        client.clone(),
+        user,
+        password
+    ))))
 }
 
 /// Fetch a new auth token for the account and update the `EtebaseAccount` object with it
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_account_fetch_token(this: &mut Account) -> i32 {
+pub unsafe extern "C" fn etebase_account_fetch_token(this: &mut Account) -> i32 {
     try_or_int!(this.fetch_token());
     0
 }
@@ -438,7 +455,7 @@ pub unsafe extern fn etebase_account_fetch_token(this: &mut Account) -> i32 {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_account_fetch_dashboard_url(this: &Account) -> *mut c_char {
+pub unsafe extern "C" fn etebase_account_fetch_dashboard_url(this: &Account) -> *mut c_char {
     let url = try_or_null!(this.fetch_dashboard_url());
     try_or_null!(CString::new(url)).into_raw()
 }
@@ -448,7 +465,10 @@ pub unsafe extern fn etebase_account_fetch_dashboard_url(this: &Account) -> *mut
 /// @param this_ the object handle
 /// @param server_url the new server URL to be set
 #[no_mangle]
-pub unsafe extern fn etebase_account_force_server_url(this: &mut Account, server_url: *const c_char) -> i32 {
+pub unsafe extern "C" fn etebase_account_force_server_url(
+    this: &mut Account,
+    server_url: *const c_char,
+) -> i32 {
     let server_url = CStr::from_ptr(server_url).to_str().unwrap();
     try_or_int!(this.force_server_url(server_url));
     0
@@ -459,7 +479,10 @@ pub unsafe extern fn etebase_account_force_server_url(this: &mut Account, server
 /// @param this_ the object handle
 /// @param password the new password to be set
 #[no_mangle]
-pub unsafe extern fn etebase_account_change_password(this: &mut Account, password: *const c_char) -> i32 {
+pub unsafe extern "C" fn etebase_account_change_password(
+    this: &mut Account,
+    password: *const c_char,
+) -> i32 {
     let password = CStr::from_ptr(password).to_str().unwrap();
     try_or_int!(this.change_password(password));
     0
@@ -469,7 +492,7 @@ pub unsafe extern fn etebase_account_change_password(this: &mut Account, passwor
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_account_logout(this: &mut Account) -> i32 {
+pub unsafe extern "C" fn etebase_account_logout(this: &mut Account) -> i32 {
     try_or_int!(this.logout());
     0
 }
@@ -478,24 +501,20 @@ pub unsafe extern fn etebase_account_logout(this: &mut Account) -> i32 {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_account_get_collection_manager(this: &Account) -> *mut CollectionManager {
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.collection_manager())
-        )
-    )
+pub unsafe extern "C" fn etebase_account_get_collection_manager(
+    this: &Account,
+) -> *mut CollectionManager {
+    Box::into_raw(Box::new(try_or_null!(this.collection_manager())))
 }
 
 /// Return a `EtebaseCollectionInvitationManager` for managing collection invitations
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_account_get_invitation_manager(this: &Account) -> *mut CollectionInvitationManager {
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.invitation_manager())
-        )
-    )
+pub unsafe extern "C" fn etebase_account_get_invitation_manager(
+    this: &Account,
+) -> *mut CollectionInvitationManager {
+    Box::into_raw(Box::new(try_or_null!(this.invitation_manager())))
 }
 
 /// Save the account object to a string for restoring it later using `etebase_account_restore`
@@ -504,11 +523,18 @@ pub unsafe extern fn etebase_account_get_invitation_manager(this: &Account) -> *
 /// @param encryption_key used to encrypt the returned account string to enhance security
 /// @param encryption_key_size size of the encryption_key
 #[no_mangle]
-pub unsafe extern fn etebase_account_save(this: &Account, encryption_key: *const c_void, encryption_key_size: usize) -> *mut c_char {
+pub unsafe extern "C" fn etebase_account_save(
+    this: &Account,
+    encryption_key: *const c_void,
+    encryption_key_size: usize,
+) -> *mut c_char {
     let encryption_key = if encryption_key.is_null() {
         None
     } else {
-        Some(std::slice::from_raw_parts(encryption_key as *const u8, encryption_key_size))
+        Some(std::slice::from_raw_parts(
+            encryption_key as *const u8,
+            encryption_key_size,
+        ))
     };
     let saved = try_or_null!(this.save(encryption_key));
     try_or_null!(CString::new(saved)).into_raw()
@@ -521,31 +547,38 @@ pub unsafe extern fn etebase_account_save(this: &Account, encryption_key: *const
 /// @param encryption_key the same encryption key passed to `etebase_account_save` while saving the account
 /// @param encryption_key_size size of the encryption_key
 #[no_mangle]
-pub unsafe extern fn etebase_account_restore(client: &Client, account_data_stored: *const c_char, encryption_key: *const c_void, encryption_key_size: usize) -> *mut Account {
+pub unsafe extern "C" fn etebase_account_restore(
+    client: &Client,
+    account_data_stored: *const c_char,
+    encryption_key: *const c_void,
+    encryption_key_size: usize,
+) -> *mut Account {
     let account_data_stored = CStr::from_ptr(account_data_stored).to_str().unwrap();
     let encryption_key = if encryption_key.is_null() {
         None
     } else {
-        Some(std::slice::from_raw_parts(encryption_key as *const u8, encryption_key_size))
+        Some(std::slice::from_raw_parts(
+            encryption_key as *const u8,
+            encryption_key_size,
+        ))
     };
-    Box::into_raw(
-        Box::new(
-            try_or_null!(Account::restore(client.clone(), account_data_stored, encryption_key))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(Account::restore(
+        client.clone(),
+        account_data_stored,
+        encryption_key
+    ))))
 }
 
 /// Destroy the object
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_account_destroy(this: *mut Account) {
+pub unsafe extern "C" fn etebase_account_destroy(this: *mut Account) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class RemovedCollection {
 
@@ -553,13 +586,18 @@ pub unsafe extern fn etebase_account_destroy(this: *mut Account) {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_removed_collection_get_uid(this: &RemovedCollection) -> *const c_char {
+pub unsafe extern "C" fn etebase_removed_collection_get_uid(
+    this: &RemovedCollection,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.uid()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -567,13 +605,12 @@ pub unsafe extern fn etebase_removed_collection_get_uid(this: &RemovedCollection
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_removed_collection_destroy(this: *mut RemovedCollection) {
+pub unsafe extern "C" fn etebase_removed_collection_destroy(this: *mut RemovedCollection) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class CollectionListResponse {
 
@@ -583,13 +620,18 @@ type CollectionListResponse = etebase::CollectionListResponse<Collection>;
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_list_response_get_stoken(this: &CollectionListResponse) -> *const c_char {
+pub unsafe extern "C" fn etebase_collection_list_response_get_stoken(
+    this: &CollectionListResponse,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.stoken().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -598,7 +640,10 @@ pub unsafe extern fn etebase_collection_list_response_get_stoken(this: &Collecti
 /// @param this_ the object handle
 /// @param[out] data the array to store the collections in
 #[no_mangle]
-pub unsafe extern fn etebase_collection_list_response_get_data(this: &CollectionListResponse, data: *mut *const Collection) -> i32 {
+pub unsafe extern "C" fn etebase_collection_list_response_get_data(
+    this: &CollectionListResponse,
+    data: *mut *const Collection,
+) -> i32 {
     let ret: Vec<&Collection> = this.data().iter().collect();
     data.copy_from_nonoverlapping(ret.as_ptr() as *mut *const Collection, ret.len());
     0
@@ -608,7 +653,9 @@ pub unsafe extern fn etebase_collection_list_response_get_data(this: &Collection
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_list_response_get_data_length(this: &CollectionListResponse) -> usize {
+pub unsafe extern "C" fn etebase_collection_list_response_get_data_length(
+    this: &CollectionListResponse,
+) -> usize {
     this.data().len()
 }
 
@@ -616,7 +663,9 @@ pub unsafe extern fn etebase_collection_list_response_get_data_length(this: &Col
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_list_response_is_done(this: &CollectionListResponse) -> bool {
+pub unsafe extern "C" fn etebase_collection_list_response_is_done(
+    this: &CollectionListResponse,
+) -> bool {
     this.done()
 }
 
@@ -625,7 +674,10 @@ pub unsafe extern fn etebase_collection_list_response_is_done(this: &CollectionL
 /// @param this_ the object handle
 /// @param[out] data the array to store the collections in
 #[no_mangle]
-pub unsafe extern fn etebase_collection_list_response_get_removed_memberships(this: &CollectionListResponse, data: *mut *const RemovedCollection) -> i32 {
+pub unsafe extern "C" fn etebase_collection_list_response_get_removed_memberships(
+    this: &CollectionListResponse,
+    data: *mut *const RemovedCollection,
+) -> i32 {
     let removed_memberships = this.removed_memberships();
     if removed_memberships.is_none() {
         return 0;
@@ -640,7 +692,9 @@ pub unsafe extern fn etebase_collection_list_response_get_removed_memberships(th
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_list_response_get_removed_memberships_length(this: &CollectionListResponse) -> usize {
+pub unsafe extern "C" fn etebase_collection_list_response_get_removed_memberships_length(
+    this: &CollectionListResponse,
+) -> usize {
     if let Some(removed_memberships) = this.removed_memberships() {
         removed_memberships.len()
     } else {
@@ -652,13 +706,14 @@ pub unsafe extern fn etebase_collection_list_response_get_removed_memberships_le
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_list_response_destroy(this: *mut CollectionListResponse) {
+pub unsafe extern "C" fn etebase_collection_list_response_destroy(
+    this: *mut CollectionListResponse,
+) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class ItemListResponse {
 
@@ -668,13 +723,18 @@ type ItemListResponse = etebase::ItemListResponse<Item>;
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_list_response_get_stoken(this: &ItemListResponse) -> *const c_char {
+pub unsafe extern "C" fn etebase_item_list_response_get_stoken(
+    this: &ItemListResponse,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.stoken().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -683,7 +743,10 @@ pub unsafe extern fn etebase_item_list_response_get_stoken(this: &ItemListRespon
 /// @param this_ the object handle
 /// @param[out] data the array to store the items in
 #[no_mangle]
-pub unsafe extern fn etebase_item_list_response_get_data(this: &ItemListResponse, data: *mut *const Item) -> i32 {
+pub unsafe extern "C" fn etebase_item_list_response_get_data(
+    this: &ItemListResponse,
+    data: *mut *const Item,
+) -> i32 {
     let ret: Vec<&Item> = this.data().iter().collect();
     data.copy_from_nonoverlapping(ret.as_ptr() as *mut *const Item, ret.len());
     0
@@ -693,7 +756,9 @@ pub unsafe extern fn etebase_item_list_response_get_data(this: &ItemListResponse
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_list_response_get_data_length(this: &ItemListResponse) -> usize {
+pub unsafe extern "C" fn etebase_item_list_response_get_data_length(
+    this: &ItemListResponse,
+) -> usize {
     this.data().len()
 }
 
@@ -701,7 +766,7 @@ pub unsafe extern fn etebase_item_list_response_get_data_length(this: &ItemListR
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_list_response_is_done(this: &ItemListResponse) -> bool {
+pub unsafe extern "C" fn etebase_item_list_response_is_done(this: &ItemListResponse) -> bool {
     this.done()
 }
 
@@ -709,13 +774,12 @@ pub unsafe extern fn etebase_item_list_response_is_done(this: &ItemListResponse)
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_list_response_destroy(this: *mut ItemListResponse) {
+pub unsafe extern "C" fn etebase_item_list_response_destroy(this: *mut ItemListResponse) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class ItemRevisionsListResponse {
 
@@ -725,13 +789,18 @@ type ItemRevisionsListResponse = etebase::IteratorListResponse<Item>;
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_revisions_list_response_get_iterator(this: &ItemRevisionsListResponse) -> *const c_char {
+pub unsafe extern "C" fn etebase_item_revisions_list_response_get_iterator(
+    this: &ItemRevisionsListResponse,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.iterator().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -740,7 +809,10 @@ pub unsafe extern fn etebase_item_revisions_list_response_get_iterator(this: &It
 /// @param this_ the object handle
 /// @param[out] data the array to store the items in
 #[no_mangle]
-pub unsafe extern fn etebase_item_revisions_list_response_get_data(this: &ItemRevisionsListResponse, data: *mut *const Item) -> i32 {
+pub unsafe extern "C" fn etebase_item_revisions_list_response_get_data(
+    this: &ItemRevisionsListResponse,
+    data: *mut *const Item,
+) -> i32 {
     let ret: Vec<&Item> = this.data().iter().collect();
     data.copy_from_nonoverlapping(ret.as_ptr() as *mut *const Item, ret.len());
     0
@@ -750,7 +822,9 @@ pub unsafe extern fn etebase_item_revisions_list_response_get_data(this: &ItemRe
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_revisions_list_response_get_data_length(this: &ItemRevisionsListResponse) -> usize {
+pub unsafe extern "C" fn etebase_item_revisions_list_response_get_data_length(
+    this: &ItemRevisionsListResponse,
+) -> usize {
     this.data().len()
 }
 
@@ -758,7 +832,9 @@ pub unsafe extern fn etebase_item_revisions_list_response_get_data_length(this: 
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_revisions_list_response_is_done(this: &ItemRevisionsListResponse) -> bool {
+pub unsafe extern "C" fn etebase_item_revisions_list_response_is_done(
+    this: &ItemRevisionsListResponse,
+) -> bool {
     this.done()
 }
 
@@ -766,13 +842,14 @@ pub unsafe extern fn etebase_item_revisions_list_response_is_done(this: &ItemRev
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_revisions_list_response_destroy(this: *mut ItemRevisionsListResponse) {
+pub unsafe extern "C" fn etebase_item_revisions_list_response_destroy(
+    this: *mut ItemRevisionsListResponse,
+) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Enum PrefetchOption {
 
@@ -787,7 +864,6 @@ pub enum PrefetchOption {
 
 // }
 
-
 // Class FetchOptions {
 
 /// Configuration options for data fetching
@@ -797,6 +873,12 @@ pub struct FetchOptions {
     iterator: Option<String>,
     prefetch: Option<etebase::PrefetchOption>,
     with_collection: Option<bool>,
+}
+
+impl Default for FetchOptions {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FetchOptions {
@@ -834,7 +916,7 @@ impl FetchOptions {
         self.stoken = stoken.map(str::to_string);
     }
 
-    pub fn to_fetch_options<'a>(&'a self) -> etebase::FetchOptions<'a> {
+    pub fn to_fetch_options(&self) -> etebase::FetchOptions<'_> {
         let mut ret = etebase::FetchOptions::new();
         if let Some(limit) = self.limit {
             ret = ret.limit(limit);
@@ -855,12 +937,8 @@ impl FetchOptions {
 ///
 /// Should be destroyed with `etebase_fetch_options_destroy`
 #[no_mangle]
-pub unsafe extern fn etebase_fetch_options_new() -> *mut FetchOptions {
-    Box::into_raw(
-        Box::new(
-            FetchOptions::new()
-        )
-    )
+pub unsafe extern "C" fn etebase_fetch_options_new() -> *mut FetchOptions {
+    Box::into_raw(Box::new(FetchOptions::new()))
 }
 
 /// Limit the amount of items returned
@@ -868,7 +946,7 @@ pub unsafe extern fn etebase_fetch_options_new() -> *mut FetchOptions {
 /// @param this_ the object handle
 /// @param limit the limit to set
 #[no_mangle]
-pub unsafe extern fn etebase_fetch_options_set_limit(this: &mut FetchOptions, limit: usize) {
+pub unsafe extern "C" fn etebase_fetch_options_set_limit(this: &mut FetchOptions, limit: usize) {
     this.limit(limit);
 }
 
@@ -877,7 +955,10 @@ pub unsafe extern fn etebase_fetch_options_set_limit(this: &mut FetchOptions, li
 /// @param this_ the object handle
 /// @param prefetch the prefetch option to set
 #[no_mangle]
-pub unsafe extern fn etebase_fetch_options_set_prefetch(this: &mut FetchOptions, prefetch: PrefetchOption) {
+pub unsafe extern "C" fn etebase_fetch_options_set_prefetch(
+    this: &mut FetchOptions,
+    prefetch: PrefetchOption,
+) {
     this.prefetch(prefetch);
 }
 
@@ -886,7 +967,10 @@ pub unsafe extern fn etebase_fetch_options_set_prefetch(this: &mut FetchOptions,
 /// @param this_ the object handle
 /// @param with_collection set whether to fetch the collection's item
 #[no_mangle]
-pub unsafe extern fn etebase_fetch_options_set_with_collection(this: &mut FetchOptions, with_collection: bool) {
+pub unsafe extern "C" fn etebase_fetch_options_set_with_collection(
+    this: &mut FetchOptions,
+    with_collection: bool,
+) {
     this.with_collection(with_collection);
 }
 
@@ -895,7 +979,10 @@ pub unsafe extern fn etebase_fetch_options_set_with_collection(this: &mut FetchO
 /// @param this_ the object handle
 /// @param iterator the iterator to start from
 #[no_mangle]
-pub unsafe extern fn etebase_fetch_options_set_iterator(this: &mut FetchOptions, iterator: *const c_char) {
+pub unsafe extern "C" fn etebase_fetch_options_set_iterator(
+    this: &mut FetchOptions,
+    iterator: *const c_char,
+) {
     let iterator = ptr_to_option(iterator).map(|x| CStr::from_ptr(x).to_str().unwrap());
     this.iterator(iterator);
 }
@@ -905,7 +992,10 @@ pub unsafe extern fn etebase_fetch_options_set_iterator(this: &mut FetchOptions,
 /// @param this_ the object handle
 /// @param stoken the sync token to set
 #[no_mangle]
-pub unsafe extern fn etebase_fetch_options_set_stoken(this: &mut FetchOptions, stoken: *const c_char) {
+pub unsafe extern "C" fn etebase_fetch_options_set_stoken(
+    this: &mut FetchOptions,
+    stoken: *const c_char,
+) {
     let stoken = ptr_to_option(stoken).map(|x| CStr::from_ptr(x).to_str().unwrap());
     this.stoken(stoken);
 }
@@ -914,13 +1004,12 @@ pub unsafe extern fn etebase_fetch_options_set_stoken(this: &mut FetchOptions, s
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_fetch_options_destroy(this: *mut FetchOptions) {
+pub unsafe extern "C" fn etebase_fetch_options_destroy(this: *mut FetchOptions) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class ItemMetadata {
 
@@ -928,12 +1017,8 @@ pub unsafe extern fn etebase_fetch_options_destroy(this: *mut FetchOptions) {
 ///
 /// Should be destroyed with `etebase_item_metadata_destroy`
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_new() -> *mut ItemMetadata {
-    Box::into_raw(
-        Box::new(
-            ItemMetadata::new()
-        )
-    )
+pub unsafe extern "C" fn etebase_item_metadata_new() -> *mut ItemMetadata {
+    Box::into_raw(Box::new(ItemMetadata::new()))
 }
 
 /// Set the item type
@@ -941,7 +1026,10 @@ pub unsafe extern fn etebase_item_metadata_new() -> *mut ItemMetadata {
 /// @param this_ the object handle
 /// @param item_type the type to be set
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_set_item_type(this: &mut ItemMetadata, item_type: *const c_char) {
+pub unsafe extern "C" fn etebase_item_metadata_set_item_type(
+    this: &mut ItemMetadata,
+    item_type: *const c_char,
+) {
     let item_type = ptr_to_option(item_type).map(|x| CStr::from_ptr(x).to_str().unwrap());
     this.set_item_type(item_type);
 }
@@ -950,13 +1038,16 @@ pub unsafe extern fn etebase_item_metadata_set_item_type(this: &mut ItemMetadata
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_get_item_type(this: &ItemMetadata) -> *const c_char {
+pub unsafe extern "C" fn etebase_item_metadata_get_item_type(this: &ItemMetadata) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.item_type().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -967,7 +1058,10 @@ pub unsafe extern fn etebase_item_metadata_get_item_type(this: &ItemMetadata) ->
 /// @param this_ the object handle
 /// @param name the name to be set
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_set_name(this: &mut ItemMetadata, name: *const c_char) {
+pub unsafe extern "C" fn etebase_item_metadata_set_name(
+    this: &mut ItemMetadata,
+    name: *const c_char,
+) {
     let name = ptr_to_option(name).map(|x| CStr::from_ptr(x).to_str().unwrap());
     this.set_name(name);
 }
@@ -976,13 +1070,16 @@ pub unsafe extern fn etebase_item_metadata_set_name(this: &mut ItemMetadata, nam
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_get_name(this: &ItemMetadata) -> *const c_char {
+pub unsafe extern "C" fn etebase_item_metadata_get_name(this: &ItemMetadata) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.name().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -991,12 +1088,11 @@ pub unsafe extern fn etebase_item_metadata_get_name(this: &ItemMetadata) -> *con
 /// @param this_ the object handle
 /// @param mtime the modification time in milliseconds since epoch
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_set_mtime(this: &mut ItemMetadata, mtime: *const i64) {
-    let mtime = if mtime.is_null() {
-        None
-    } else {
-        Some(*mtime)
-    };
+pub unsafe extern "C" fn etebase_item_metadata_set_mtime(
+    this: &mut ItemMetadata,
+    mtime: *const i64,
+) {
+    let mtime = if mtime.is_null() { None } else { Some(*mtime) };
     this.set_mtime(mtime);
 }
 
@@ -1004,13 +1100,16 @@ pub unsafe extern fn etebase_item_metadata_set_mtime(this: &mut ItemMetadata, mt
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_get_mtime(this: &ItemMetadata) -> *const i64 {
+pub unsafe extern "C" fn etebase_item_metadata_get_mtime(this: &ItemMetadata) -> *const i64 {
     thread_local! {
         static LAST: RefCell<Option<i64>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.mtime();
-        ret.borrow().as_ref().map(|x| x as *const i64).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x as *const i64)
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -1019,7 +1118,10 @@ pub unsafe extern fn etebase_item_metadata_get_mtime(this: &ItemMetadata) -> *co
 /// @param this_ the object handle
 /// @param description the description to be set
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_set_description(this: &mut ItemMetadata, description: *const c_char) {
+pub unsafe extern "C" fn etebase_item_metadata_set_description(
+    this: &mut ItemMetadata,
+    description: *const c_char,
+) {
     let description = ptr_to_option(description).map(|x| CStr::from_ptr(x).to_str().unwrap());
     this.set_description(description);
 }
@@ -1028,13 +1130,18 @@ pub unsafe extern fn etebase_item_metadata_set_description(this: &mut ItemMetada
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_get_description(this: &ItemMetadata) -> *const c_char {
+pub unsafe extern "C" fn etebase_item_metadata_get_description(
+    this: &ItemMetadata,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.description().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -1043,7 +1150,10 @@ pub unsafe extern fn etebase_item_metadata_get_description(this: &ItemMetadata) 
 /// @param this_ the object handle
 /// @param color the color to be set in `#RRGGBB` or `#RRGGBBAA` format
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_set_color(this: &mut ItemMetadata, color: *const c_char) {
+pub unsafe extern "C" fn etebase_item_metadata_set_color(
+    this: &mut ItemMetadata,
+    color: *const c_char,
+) {
     let color = ptr_to_option(color).map(|x| CStr::from_ptr(x).to_str().unwrap());
     this.set_color(color);
 }
@@ -1052,13 +1162,16 @@ pub unsafe extern fn etebase_item_metadata_set_color(this: &mut ItemMetadata, co
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_get_color(this: &ItemMetadata) -> *const c_char {
+pub unsafe extern "C" fn etebase_item_metadata_get_color(this: &ItemMetadata) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.color().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -1066,13 +1179,12 @@ pub unsafe extern fn etebase_item_metadata_get_color(this: &ItemMetadata) -> *co
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_metadata_destroy(this: *mut ItemMetadata) {
+pub unsafe extern "C" fn etebase_item_metadata_destroy(this: *mut ItemMetadata) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class CollectionManager {
 
@@ -1082,14 +1194,16 @@ pub unsafe extern fn etebase_item_metadata_destroy(this: *mut ItemMetadata) {
 /// @param col_uid the UID of the collection to be fetched
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_fetch(this: &CollectionManager, col_uid: *const c_char, fetch_options: Option<&FetchOptions>) -> *mut Collection {
+pub unsafe extern "C" fn etebase_collection_manager_fetch(
+    this: &CollectionManager,
+    col_uid: *const c_char,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut Collection {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
     let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.fetch(col_uid, fetch_options.as_ref()))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(
+        this.fetch(col_uid, fetch_options.as_ref())
+    )))
 }
 
 /// Create a new collection
@@ -1102,14 +1216,20 @@ pub unsafe extern fn etebase_collection_manager_fetch(this: &CollectionManager, 
 /// @param content the collection's content as a byte array. This is unrelated to the [Item]s in the collection.
 /// @param content_size the content size
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_create(this: &CollectionManager, collection_type: *const c_char, meta: &ItemMetadata, content: *const c_void, content_size: usize) -> *mut Collection {
+pub unsafe extern "C" fn etebase_collection_manager_create(
+    this: &CollectionManager,
+    collection_type: *const c_char,
+    meta: &ItemMetadata,
+    content: *const c_void,
+    content_size: usize,
+) -> *mut Collection {
     let collection_type = CStr::from_ptr(collection_type).to_str().unwrap();
     let content = std::slice::from_raw_parts(content as *const u8, content_size);
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.create(collection_type, meta, content))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(this.create(
+        collection_type,
+        meta,
+        content
+    ))))
 }
 
 /// Create a new collection using raw metadata
@@ -1126,15 +1246,22 @@ pub unsafe extern fn etebase_collection_manager_create(this: &CollectionManager,
 /// @param content the collection's content as a byte array. This is unrelated to the [Item]s in the collection.
 /// @param content_size the content size
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_create_raw(this: &CollectionManager, collection_type: *const c_char, meta: *const c_void, meta_size: usize, content: *const c_void, content_size: usize) -> *mut Collection {
+pub unsafe extern "C" fn etebase_collection_manager_create_raw(
+    this: &CollectionManager,
+    collection_type: *const c_char,
+    meta: *const c_void,
+    meta_size: usize,
+    content: *const c_void,
+    content_size: usize,
+) -> *mut Collection {
     let collection_type = CStr::from_ptr(collection_type).to_str().unwrap();
     let meta = std::slice::from_raw_parts(meta as *const u8, meta_size);
     let content = std::slice::from_raw_parts(content as *const u8, content_size);
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.create_raw(collection_type, meta, content))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(this.create_raw(
+        collection_type,
+        meta,
+        content
+    ))))
 }
 
 /// Return the item manager for the supplied collection
@@ -1142,12 +1269,11 @@ pub unsafe extern fn etebase_collection_manager_create_raw(this: &CollectionMana
 /// @param this_ the object handle
 /// @param col the collection for which the item manager is required
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_get_item_manager(this: &CollectionManager, col: &Collection) -> *mut ItemManager {
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.item_manager(col))
-        )
-    )
+pub unsafe extern "C" fn etebase_collection_manager_get_item_manager(
+    this: &CollectionManager,
+    col: &Collection,
+) -> *mut ItemManager {
+    Box::into_raw(Box::new(try_or_null!(this.item_manager(col))))
 }
 
 /// Fetch all collections of a specific type from the server and return a list response
@@ -1156,14 +1282,16 @@ pub unsafe extern fn etebase_collection_manager_get_item_manager(this: &Collecti
 /// @param collection_type the type of items stored in the collection
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_list(this: &CollectionManager, collection_type: *const c_char, fetch_options: Option<&FetchOptions>) -> *mut CollectionListResponse {
+pub unsafe extern "C" fn etebase_collection_manager_list(
+    this: &CollectionManager,
+    collection_type: *const c_char,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut CollectionListResponse {
     let collection_type = CStr::from_ptr(collection_type).to_str().unwrap();
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.list(collection_type, fetch_options.as_ref()))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(
+        this.list(collection_type, fetch_options.as_ref())
+    )))
 }
 
 /// Fetch all collections of the supplied types from the server and return a list response
@@ -1173,14 +1301,19 @@ pub unsafe extern fn etebase_collection_manager_list(this: &CollectionManager, c
 /// @param collection_types_size size of the collection_types array
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_list_multi(this: &CollectionManager, collection_types: *const *const c_char, collection_types_size: usize, fetch_options: Option<&FetchOptions>) -> *mut CollectionListResponse {
-    let collection_types = std::slice::from_raw_parts(collection_types, collection_types_size).into_iter().map(|x| CStr::from_ptr(*x).to_str().unwrap());
+pub unsafe extern "C" fn etebase_collection_manager_list_multi(
+    this: &CollectionManager,
+    collection_types: *const *const c_char,
+    collection_types_size: usize,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut CollectionListResponse {
+    let collection_types = std::slice::from_raw_parts(collection_types, collection_types_size)
+        .iter()
+        .map(|x| CStr::from_ptr(*x).to_str().unwrap());
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.list_multi(collection_types, fetch_options.as_ref()))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(
+        this.list_multi(collection_types, fetch_options.as_ref())
+    )))
 }
 
 /// Upload a collection
@@ -1189,7 +1322,11 @@ pub unsafe extern fn etebase_collection_manager_list_multi(this: &CollectionMana
 /// @param collection the collection object to be uploaded
 /// @param fetch_options the `EtebaseFetchOptions` to upload with
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_upload(this: &CollectionManager, collection: &Collection, fetch_options: Option<&FetchOptions>) -> i32 {
+pub unsafe extern "C" fn etebase_collection_manager_upload(
+    this: &CollectionManager,
+    collection: &Collection,
+    fetch_options: Option<&FetchOptions>,
+) -> i32 {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
     try_or_int!(this.upload(collection, fetch_options.as_ref()));
     0
@@ -1203,7 +1340,11 @@ pub unsafe extern fn etebase_collection_manager_upload(this: &CollectionManager,
 /// @param collection the collection object to be uploaded
 /// @param fetch_options the `EtebaseFetchOptions` to upload with
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_transaction(this: &CollectionManager, collection: &Collection, fetch_options: Option<&FetchOptions>) -> i32 {
+pub unsafe extern "C" fn etebase_collection_manager_transaction(
+    this: &CollectionManager,
+    collection: &Collection,
+    fetch_options: Option<&FetchOptions>,
+) -> i32 {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
     try_or_int!(this.transaction(collection, fetch_options.as_ref()));
     0
@@ -1215,13 +1356,13 @@ pub unsafe extern fn etebase_collection_manager_transaction(this: &CollectionMan
 /// @param cached the byte buffer holding the cached collection obtained using [cache_save]
 /// @param cached_size size of the buffer
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_cache_load(this: &CollectionManager, cached: *const c_void, cached_size: usize) -> *mut Collection {
+pub unsafe extern "C" fn etebase_collection_manager_cache_load(
+    this: &CollectionManager,
+    cached: *const c_void,
+    cached_size: usize,
+) -> *mut Collection {
     let cached = std::slice::from_raw_parts(cached as *const u8, cached_size);
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.cache_load(cached))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(this.cache_load(cached))))
 }
 
 /// Save the collection object to a byte buffer for caching
@@ -1232,7 +1373,11 @@ pub unsafe extern fn etebase_collection_manager_cache_load(this: &CollectionMana
 /// @param collection the collection object to be cached
 /// @param[out] ret_size to hold the size of the returned buffer
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_cache_save(this: &CollectionManager, collection: &Collection, ret_size: *mut usize) -> *mut c_void {
+pub unsafe extern "C" fn etebase_collection_manager_cache_save(
+    this: &CollectionManager,
+    collection: &Collection,
+    ret_size: *mut usize,
+) -> *mut c_void {
     let mut ret = try_or_null!(this.cache_save(collection));
     if !ret_size.is_null() {
         *ret_size = ret.len();
@@ -1250,7 +1395,11 @@ pub unsafe extern fn etebase_collection_manager_cache_save(this: &CollectionMana
 /// @param collection the collection object to be cached
 /// @param[out] ret_size to hold the size of the returned buffer
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_cache_save_with_content(this: &CollectionManager, collection: &Collection, ret_size: *mut usize) ->*mut c_void {
+pub unsafe extern "C" fn etebase_collection_manager_cache_save_with_content(
+    this: &CollectionManager,
+    collection: &Collection,
+    ret_size: *mut usize,
+) -> *mut c_void {
     let mut ret = try_or_null!(this.cache_save_with_content(collection));
     if !ret_size.is_null() {
         *ret_size = ret.len();
@@ -1265,25 +1414,23 @@ pub unsafe extern fn etebase_collection_manager_cache_save_with_content(this: &C
 /// @param this_ the object handle
 /// @param col the collection for which the manager is required
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_get_member_manager(this: &CollectionManager, col: &Collection) -> *mut CollectionMemberManager {
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.member_manager(col))
-        )
-    )
+pub unsafe extern "C" fn etebase_collection_manager_get_member_manager(
+    this: &CollectionManager,
+    col: &Collection,
+) -> *mut CollectionMemberManager {
+    Box::into_raw(Box::new(try_or_null!(this.member_manager(col))))
 }
 
 /// Destroy the object
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_manager_destroy(this: *mut CollectionManager) {
+pub unsafe extern "C" fn etebase_collection_manager_destroy(this: *mut CollectionManager) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class ItemManager {
 
@@ -1293,14 +1440,16 @@ pub unsafe extern fn etebase_collection_manager_destroy(this: *mut CollectionMan
 /// @param item_uid the UID of the item to be fetched
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_fetch(this: &ItemManager, item_uid: *const c_char, fetch_options: Option<&FetchOptions>) -> *mut Item {
+pub unsafe extern "C" fn etebase_item_manager_fetch(
+    this: &ItemManager,
+    item_uid: *const c_char,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut Item {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
     let item_uid = CStr::from_ptr(item_uid).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.fetch(item_uid, fetch_options.as_ref()))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(
+        this.fetch(item_uid, fetch_options.as_ref())
+    )))
 }
 
 /// Create a new item
@@ -1312,13 +1461,14 @@ pub unsafe extern fn etebase_item_manager_fetch(this: &ItemManager, item_uid: *c
 /// @param content the item's content as a byte array
 /// @param content_size the content size
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_create(this: &ItemManager, meta: &ItemMetadata, content: *const c_void, content_size: usize) -> *mut Item {
+pub unsafe extern "C" fn etebase_item_manager_create(
+    this: &ItemManager,
+    meta: &ItemMetadata,
+    content: *const c_void,
+    content_size: usize,
+) -> *mut Item {
     let content = std::slice::from_raw_parts(content as *const u8, content_size);
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.create(meta, content))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(this.create(meta, content))))
 }
 
 /// Create a new item using raw metadata
@@ -1334,14 +1484,16 @@ pub unsafe extern fn etebase_item_manager_create(this: &ItemManager, meta: &Item
 /// @param content the item's content as a byte array
 /// @param content_size the content size
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_create_raw(this: &ItemManager, meta: *const c_void, meta_size: usize, content: *const c_void, content_size: usize) -> *mut Item {
+pub unsafe extern "C" fn etebase_item_manager_create_raw(
+    this: &ItemManager,
+    meta: *const c_void,
+    meta_size: usize,
+    content: *const c_void,
+    content_size: usize,
+) -> *mut Item {
     let meta = std::slice::from_raw_parts(meta as *const u8, meta_size);
     let content = std::slice::from_raw_parts(content as *const u8, content_size);
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.create_raw(meta, content))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(this.create_raw(meta, content))))
 }
 
 /// Fetch all items of a collection and return a list response
@@ -1349,13 +1501,12 @@ pub unsafe extern fn etebase_item_manager_create_raw(this: &ItemManager, meta: *
 /// @param this_ the object handle
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_list(this: &ItemManager, fetch_options: Option<&FetchOptions>) -> *mut ItemListResponse {
+pub unsafe extern "C" fn etebase_item_manager_list(
+    this: &ItemManager,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut ItemListResponse {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.list(fetch_options.as_ref()))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(this.list(fetch_options.as_ref()))))
 }
 
 /// Fetch and return a list response of items with each item as the revision
@@ -1364,13 +1515,15 @@ pub unsafe extern fn etebase_item_manager_list(this: &ItemManager, fetch_options
 /// @param item the item for which to fetch the revision history
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_item_revisions(this: &ItemManager, item: &Item, fetch_options: Option<&FetchOptions>) -> *mut ItemRevisionsListResponse {
+pub unsafe extern "C" fn etebase_item_manager_item_revisions(
+    this: &ItemManager,
+    item: &Item,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut ItemRevisionsListResponse {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.item_revisions(item, fetch_options.as_ref()))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(
+        this.item_revisions(item, fetch_options.as_ref())
+    )))
 }
 
 /// Fetch the latest revision of the supplied items from the server and return a list response
@@ -1380,14 +1533,19 @@ pub unsafe extern fn etebase_item_manager_item_revisions(this: &ItemManager, ite
 /// @param items_size the number of items
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_fetch_updates(this: &ItemManager, items: *const &Item, items_size: usize, fetch_options: Option<&FetchOptions>) -> *mut ItemListResponse {
+pub unsafe extern "C" fn etebase_item_manager_fetch_updates(
+    this: &ItemManager,
+    items: *const &Item,
+    items_size: usize,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut ItemListResponse {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    let items = std::slice::from_raw_parts(items, items_size).into_iter().map(|x| *x);
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.fetch_updates(items, fetch_options.as_ref()))
-        )
-    )
+    let items = std::slice::from_raw_parts(items, items_size)
+        .iter()
+        .copied();
+    Box::into_raw(Box::new(try_or_null!(
+        this.fetch_updates(items, fetch_options.as_ref())
+    )))
 }
 
 /// Fetch multiple Items using their UID
@@ -1399,14 +1557,19 @@ pub unsafe extern fn etebase_item_manager_fetch_updates(this: &ItemManager, item
 /// @param items_size the number of items
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_fetch_multi(this: &ItemManager, items: *const *const c_char, items_size: usize, fetch_options: Option<&FetchOptions>) -> *mut ItemListResponse {
+pub unsafe extern "C" fn etebase_item_manager_fetch_multi(
+    this: &ItemManager,
+    items: *const *const c_char,
+    items_size: usize,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut ItemListResponse {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    let items = std::slice::from_raw_parts(items, items_size).into_iter().map(|x| CStr::from_ptr(*x).to_str().unwrap());
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.fetch_multi(items, fetch_options.as_ref()))
-        )
-    )
+    let items = std::slice::from_raw_parts(items, items_size)
+        .iter()
+        .map(|x| CStr::from_ptr(*x).to_str().unwrap());
+    Box::into_raw(Box::new(try_or_null!(
+        this.fetch_multi(items, fetch_options.as_ref())
+    )))
 }
 
 /// Upload the supplied items to the server
@@ -1416,7 +1579,12 @@ pub unsafe extern fn etebase_item_manager_fetch_multi(this: &ItemManager, items:
 /// @param items_size the number of items
 /// @param fetch_options the `EtebaseFetchOptions` to upload with
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_batch(this: &ItemManager, items: *const &Item, items_size: usize, fetch_options: Option<&FetchOptions>) -> i32 {
+pub unsafe extern "C" fn etebase_item_manager_batch(
+    this: &ItemManager,
+    items: *const &Item,
+    items_size: usize,
+    fetch_options: Option<&FetchOptions>,
+) -> i32 {
     etebase_item_manager_batch_deps(this, items, items_size, std::ptr::null(), 0, fetch_options)
 }
 
@@ -1431,12 +1599,21 @@ pub unsafe extern fn etebase_item_manager_batch(this: &ItemManager, items: *cons
 /// @param deps_size the number of dependencies
 /// @param fetch_options the `EtebaseFetchOptions` to upload with
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_batch_deps(this: &ItemManager, items: *const &Item, items_size: usize, deps: *const &Item, deps_size: usize, fetch_options: Option<&FetchOptions>) -> i32 {
+pub unsafe extern "C" fn etebase_item_manager_batch_deps(
+    this: &ItemManager,
+    items: *const &Item,
+    items_size: usize,
+    deps: *const &Item,
+    deps_size: usize,
+    fetch_options: Option<&FetchOptions>,
+) -> i32 {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    let items = std::slice::from_raw_parts(items, items_size).into_iter().map(|x| *x);
+    let items = std::slice::from_raw_parts(items, items_size)
+        .iter()
+        .copied();
     let deps = ptr_to_option(deps);
     if let Some(deps) = deps {
-        let deps = std::slice::from_raw_parts(deps, deps_size).into_iter().map(|x| *x);
+        let deps = std::slice::from_raw_parts(deps, deps_size).iter().copied();
         try_or_int!(this.batch_deps(items, deps, fetch_options.as_ref()));
     } else {
         try_or_int!(this.batch(items, fetch_options.as_ref()));
@@ -1453,8 +1630,20 @@ pub unsafe extern fn etebase_item_manager_batch_deps(this: &ItemManager, items: 
 /// @param items_size the number of items
 /// @param fetch_options the `EtebaseFetchOptions` to upload with
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_transaction(this: &ItemManager, items: *const &Item, items_size: usize, fetch_options: Option<&FetchOptions>) -> i32 {
-    etebase_item_manager_transaction_deps(this, items, items_size, std::ptr::null(), 0, fetch_options)
+pub unsafe extern "C" fn etebase_item_manager_transaction(
+    this: &ItemManager,
+    items: *const &Item,
+    items_size: usize,
+    fetch_options: Option<&FetchOptions>,
+) -> i32 {
+    etebase_item_manager_transaction_deps(
+        this,
+        items,
+        items_size,
+        std::ptr::null(),
+        0,
+        fetch_options,
+    )
 }
 
 /// Upload items using a transaction with a list of items as dependencies
@@ -1466,12 +1655,21 @@ pub unsafe extern fn etebase_item_manager_transaction(this: &ItemManager, items:
 /// @param deps_size the number of dependencies
 /// @param fetch_options the `EtebaseFetchOptions` to upload with
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_transaction_deps(this: &ItemManager, items: *const &Item, items_size: usize, deps: *const &Item, deps_size: usize, fetch_options: Option<&FetchOptions>) -> i32 {
+pub unsafe extern "C" fn etebase_item_manager_transaction_deps(
+    this: &ItemManager,
+    items: *const &Item,
+    items_size: usize,
+    deps: *const &Item,
+    deps_size: usize,
+    fetch_options: Option<&FetchOptions>,
+) -> i32 {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    let items = std::slice::from_raw_parts(items, items_size).into_iter().map(|x| *x);
+    let items = std::slice::from_raw_parts(items, items_size)
+        .iter()
+        .copied();
     let deps = ptr_to_option(deps);
     if let Some(deps) = deps {
-        let deps = std::slice::from_raw_parts(deps, deps_size).into_iter().map(|x| *x);
+        let deps = std::slice::from_raw_parts(deps, deps_size).iter().copied();
         try_or_int!(this.transaction_deps(items, deps, fetch_options.as_ref()));
     } else {
         try_or_int!(this.transaction(items, fetch_options.as_ref()));
@@ -1485,13 +1683,13 @@ pub unsafe extern fn etebase_item_manager_transaction_deps(this: &ItemManager, i
 /// @param cached the byte buffer holding the cached item obtained using [cache_save]
 /// @param cached_size size of the buffer
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_cache_load(this: &ItemManager, cached: *const c_void, cached_size: usize) -> *mut Item {
+pub unsafe extern "C" fn etebase_item_manager_cache_load(
+    this: &ItemManager,
+    cached: *const c_void,
+    cached_size: usize,
+) -> *mut Item {
     let cached = std::slice::from_raw_parts(cached as *const u8, cached_size);
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.cache_load(cached))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(this.cache_load(cached))))
 }
 
 /// Save the item object to a byte buffer for caching
@@ -1502,7 +1700,11 @@ pub unsafe extern fn etebase_item_manager_cache_load(this: &ItemManager, cached:
 /// @param item the item object to be cached
 /// @param[out] ret_size to hold the size of the returned buffer
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_cache_save(this: &ItemManager, item: &Item, ret_size: *mut usize) -> *mut c_void {
+pub unsafe extern "C" fn etebase_item_manager_cache_save(
+    this: &ItemManager,
+    item: &Item,
+    ret_size: *mut usize,
+) -> *mut c_void {
     let mut ret = try_or_null!(this.cache_save(item));
     if !ret_size.is_null() {
         *ret_size = ret.len();
@@ -1520,7 +1722,11 @@ pub unsafe extern fn etebase_item_manager_cache_save(this: &ItemManager, item: &
 /// @param item the item object to be cached
 /// @param[out] ret_size to hold the size of the returned buffer
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_cache_save_with_content(this: &ItemManager, item: &Item, ret_size: *mut usize) ->*mut c_void {
+pub unsafe extern "C" fn etebase_item_manager_cache_save_with_content(
+    this: &ItemManager,
+    item: &Item,
+    ret_size: *mut usize,
+) -> *mut c_void {
     let mut ret = try_or_null!(this.cache_save_with_content(item));
     if !ret_size.is_null() {
         *ret_size = ret.len();
@@ -1534,13 +1740,12 @@ pub unsafe extern fn etebase_item_manager_cache_save_with_content(this: &ItemMan
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_manager_destroy(this: *mut ItemManager) {
+pub unsafe extern "C" fn etebase_item_manager_destroy(this: *mut ItemManager) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class Collection {
 
@@ -1548,12 +1753,8 @@ pub unsafe extern fn etebase_item_manager_destroy(this: *mut ItemManager) {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_clone(this: &Collection) -> *mut Collection {
-    Box::into_raw(
-        Box::new(
-            this.clone()
-        )
-    )
+pub unsafe extern "C" fn etebase_collection_clone(this: &Collection) -> *mut Collection {
+    Box::into_raw(Box::new(this.clone()))
 }
 
 /// Manually verify the integrity of the collection
@@ -1562,7 +1763,7 @@ pub unsafe extern fn etebase_collection_clone(this: &Collection) -> *mut Collect
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_verify(this: &Collection) -> bool {
+pub unsafe extern "C" fn etebase_collection_verify(this: &Collection) -> bool {
     this.verify().unwrap_or(false)
 }
 
@@ -1571,7 +1772,10 @@ pub unsafe extern fn etebase_collection_verify(this: &Collection) -> bool {
 /// @param this_ the object handle
 /// @param meta the metadata object to be set for the collection
 #[no_mangle]
-pub unsafe extern fn etebase_collection_set_meta(this: &mut Collection, meta: &ItemMetadata) -> i32 {
+pub unsafe extern "C" fn etebase_collection_set_meta(
+    this: &mut Collection,
+    meta: &ItemMetadata,
+) -> i32 {
     try_or_int!(this.set_meta(meta));
     0
 }
@@ -1580,12 +1784,8 @@ pub unsafe extern fn etebase_collection_set_meta(this: &mut Collection, meta: &I
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_get_meta(this: &Collection) -> *mut ItemMetadata {
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.meta())
-        )
-    )
+pub unsafe extern "C" fn etebase_collection_get_meta(this: &Collection) -> *mut ItemMetadata {
+    Box::into_raw(Box::new(try_or_null!(this.meta())))
 }
 
 /// Set metadata for the collection object from a byte array
@@ -1594,7 +1794,11 @@ pub unsafe extern fn etebase_collection_get_meta(this: &Collection) -> *mut Item
 /// @param meta the metadata for the collection. This needs to be a valid `EtebaseItemMetadata`-like struct encoded using `msgpack`.
 /// @param meta_size the metadata size
 #[no_mangle]
-pub unsafe extern fn etebase_collection_set_meta_raw(this: &mut Collection, meta: *const c_void, meta_size: usize) -> i32 {
+pub unsafe extern "C" fn etebase_collection_set_meta_raw(
+    this: &mut Collection,
+    meta: *const c_void,
+    meta_size: usize,
+) -> i32 {
     let meta = std::slice::from_raw_parts(meta as *const u8, meta_size);
     try_or_int!(this.set_meta_raw(meta));
     0
@@ -1606,7 +1810,11 @@ pub unsafe extern fn etebase_collection_set_meta_raw(this: &mut Collection, meta
 /// @param[out] buf the output byte buffer
 /// @param buf_size the maximum number of bytes to be written to buf
 #[no_mangle]
-pub unsafe extern fn etebase_collection_get_meta_raw(this: &Collection, buf: *mut c_void, buf_size: usize) -> isize {
+pub unsafe extern "C" fn etebase_collection_get_meta_raw(
+    this: &Collection,
+    buf: *mut c_void,
+    buf_size: usize,
+) -> isize {
     let ret = try_or_int!(this.meta_raw());
     let size = std::cmp::min(buf_size, ret.len());
     buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
@@ -1619,7 +1827,11 @@ pub unsafe extern fn etebase_collection_get_meta_raw(this: &Collection, buf: *mu
 /// @param content the content of the collection as a byte array
 /// @param content_size the content size
 #[no_mangle]
-pub unsafe extern fn etebase_collection_set_content(this: &mut Collection, content: *const c_void, content_size: usize) -> i32 {
+pub unsafe extern "C" fn etebase_collection_set_content(
+    this: &mut Collection,
+    content: *const c_void,
+    content_size: usize,
+) -> i32 {
     let content = std::slice::from_raw_parts(content as *const u8, content_size);
     try_or_int!(this.set_content(content));
     0
@@ -1631,7 +1843,11 @@ pub unsafe extern fn etebase_collection_set_content(this: &mut Collection, conte
 /// @param[out] buf the output byte buffer
 /// @param buf_size the maximum number of bytes to be written to buf
 #[no_mangle]
-pub unsafe extern fn etebase_collection_get_content(this: &Collection, buf: *mut c_void, buf_size: usize) -> isize {
+pub unsafe extern "C" fn etebase_collection_get_content(
+    this: &Collection,
+    buf: *mut c_void,
+    buf_size: usize,
+) -> isize {
     let ret = try_or_int!(this.content());
     let size = std::cmp::min(buf_size, ret.len());
     buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
@@ -1644,7 +1860,7 @@ pub unsafe extern fn etebase_collection_get_content(this: &Collection, buf: *mut
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_delete(this: &mut Collection) -> i32 {
+pub unsafe extern "C" fn etebase_collection_delete(this: &mut Collection) -> i32 {
     try_or_int!(this.delete());
     0
 }
@@ -1653,7 +1869,7 @@ pub unsafe extern fn etebase_collection_delete(this: &mut Collection) -> i32 {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_is_deleted(this: &Collection) -> bool {
+pub unsafe extern "C" fn etebase_collection_is_deleted(this: &Collection) -> bool {
     this.is_deleted()
 }
 
@@ -1661,13 +1877,16 @@ pub unsafe extern fn etebase_collection_is_deleted(this: &Collection) -> bool {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_get_uid(this: &Collection) -> *const c_char {
+pub unsafe extern "C" fn etebase_collection_get_uid(this: &Collection) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.uid()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -1675,13 +1894,16 @@ pub unsafe extern fn etebase_collection_get_uid(this: &Collection) -> *const c_c
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_get_etag(this: &Collection) -> *const c_char {
+pub unsafe extern "C" fn etebase_collection_get_etag(this: &Collection) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.etag()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -1691,13 +1913,16 @@ pub unsafe extern fn etebase_collection_get_etag(this: &Collection) -> *const c_
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_get_stoken(this: &Collection) -> *const c_char {
+pub unsafe extern "C" fn etebase_collection_get_stoken(this: &Collection) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.stoken().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -1705,27 +1930,27 @@ pub unsafe extern fn etebase_collection_get_stoken(this: &Collection) -> *const 
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_as_item(this: &Collection) -> *mut Item {
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.item())
-        )
-    )
+pub unsafe extern "C" fn etebase_collection_as_item(this: &Collection) -> *mut Item {
+    Box::into_raw(Box::new(try_or_null!(this.item())))
 }
 
 /// The type of the collection
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_get_collection_type(this: &Collection) -> *mut c_char {
-    CString::new(try_or_null!(this.collection_type())).unwrap().into_raw()
+pub unsafe extern "C" fn etebase_collection_get_collection_type(this: &Collection) -> *mut c_char {
+    CString::new(try_or_null!(this.collection_type()))
+        .unwrap()
+        .into_raw()
 }
 
 /// Return the access level of the collection for the current user
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_get_access_level(this: &Collection) -> CollectionAccessLevel {
+pub unsafe extern "C" fn etebase_collection_get_access_level(
+    this: &Collection,
+) -> CollectionAccessLevel {
     this.access_level()
 }
 
@@ -1733,13 +1958,12 @@ pub unsafe extern fn etebase_collection_get_access_level(this: &Collection) -> C
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_destroy(this: *mut Collection) {
+pub unsafe extern "C" fn etebase_collection_destroy(this: *mut Collection) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class Item {
 
@@ -1747,12 +1971,8 @@ pub unsafe extern fn etebase_collection_destroy(this: *mut Collection) {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_clone(this: &Item) -> *mut Item {
-    Box::into_raw(
-        Box::new(
-            this.clone()
-        )
-    )
+pub unsafe extern "C" fn etebase_item_clone(this: &Item) -> *mut Item {
+    Box::into_raw(Box::new(this.clone()))
 }
 
 /// Manually verify the integrity of the item
@@ -1761,7 +1981,7 @@ pub unsafe extern fn etebase_item_clone(this: &Item) -> *mut Item {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_verify(this: &Item) -> bool {
+pub unsafe extern "C" fn etebase_item_verify(this: &Item) -> bool {
     this.verify().unwrap_or(false)
 }
 
@@ -1770,7 +1990,7 @@ pub unsafe extern fn etebase_item_verify(this: &Item) -> bool {
 /// @param this_ the object handle
 /// @param meta the metadata object to be set for the item
 #[no_mangle]
-pub unsafe extern fn etebase_item_set_meta(this: &mut Item, meta: &ItemMetadata) -> i32 {
+pub unsafe extern "C" fn etebase_item_set_meta(this: &mut Item, meta: &ItemMetadata) -> i32 {
     try_or_int!(this.set_meta(meta));
     0
 }
@@ -1779,12 +1999,8 @@ pub unsafe extern fn etebase_item_set_meta(this: &mut Item, meta: &ItemMetadata)
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_get_meta(this: &Item) -> *mut ItemMetadata {
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.meta())
-        )
-    )
+pub unsafe extern "C" fn etebase_item_get_meta(this: &Item) -> *mut ItemMetadata {
+    Box::into_raw(Box::new(try_or_null!(this.meta())))
 }
 
 /// Set metadata for the item object from a byte array
@@ -1793,7 +2009,11 @@ pub unsafe extern fn etebase_item_get_meta(this: &Item) -> *mut ItemMetadata {
 /// @param meta the metadata for the item. This needs to be a valid `EtebaseItemMetadata`-like struct encoded using `msgpack`.
 /// @param meta_size the metadata size
 #[no_mangle]
-pub unsafe extern fn etebase_item_set_meta_raw(this: &mut Item, meta: *const c_void, meta_size: usize) -> i32 {
+pub unsafe extern "C" fn etebase_item_set_meta_raw(
+    this: &mut Item,
+    meta: *const c_void,
+    meta_size: usize,
+) -> i32 {
     let meta = std::slice::from_raw_parts(meta as *const u8, meta_size);
     try_or_int!(this.set_meta_raw(meta));
     0
@@ -1805,13 +2025,16 @@ pub unsafe extern fn etebase_item_set_meta_raw(this: &mut Item, meta: *const c_v
 /// @param[out] buf the output byte buffer
 /// @param buf_size the maximum number of bytes to be written to buf
 #[no_mangle]
-pub unsafe extern fn etebase_item_get_meta_raw(this: &Item, buf: *mut c_void, buf_size: usize) -> isize {
+pub unsafe extern "C" fn etebase_item_get_meta_raw(
+    this: &Item,
+    buf: *mut c_void,
+    buf_size: usize,
+) -> isize {
     let ret = try_or_int!(this.meta_raw());
     let size = std::cmp::min(buf_size, ret.len());
     buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
     size as isize
 }
-
 
 /// Set the content of the item
 ///
@@ -1819,7 +2042,11 @@ pub unsafe extern fn etebase_item_get_meta_raw(this: &Item, buf: *mut c_void, bu
 /// @param content the content of the item as a byte array
 /// @param content_size the content size
 #[no_mangle]
-pub unsafe extern fn etebase_item_set_content(this: &mut Item, content: *const c_void, content_size: usize) -> i32 {
+pub unsafe extern "C" fn etebase_item_set_content(
+    this: &mut Item,
+    content: *const c_void,
+    content_size: usize,
+) -> i32 {
     let content = std::slice::from_raw_parts(content as *const u8, content_size);
     try_or_int!(this.set_content(content));
     0
@@ -1831,7 +2058,11 @@ pub unsafe extern fn etebase_item_set_content(this: &mut Item, content: *const c
 /// @param[out] buf the output byte buffer
 /// @param buf_size the maximum number of bytes to be written to buf
 #[no_mangle]
-pub unsafe extern fn etebase_item_get_content(this: &Item, buf: *mut c_void, buf_size: usize) -> isize {
+pub unsafe extern "C" fn etebase_item_get_content(
+    this: &Item,
+    buf: *mut c_void,
+    buf_size: usize,
+) -> isize {
     let ret = try_or_int!(this.content());
     let size = std::cmp::min(buf_size, ret.len());
     buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
@@ -1844,7 +2075,7 @@ pub unsafe extern fn etebase_item_get_content(this: &Item, buf: *mut c_void, buf
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_delete(this: &mut Item) -> i32 {
+pub unsafe extern "C" fn etebase_item_delete(this: &mut Item) -> i32 {
     try_or_int!(this.delete());
     0
 }
@@ -1853,7 +2084,7 @@ pub unsafe extern fn etebase_item_delete(this: &mut Item) -> i32 {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_is_deleted(this: &Item) -> bool {
+pub unsafe extern "C" fn etebase_item_is_deleted(this: &Item) -> bool {
     this.is_deleted()
 }
 
@@ -1861,13 +2092,16 @@ pub unsafe extern fn etebase_item_is_deleted(this: &Item) -> bool {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_get_uid(this: &Item) -> *const c_char {
+pub unsafe extern "C" fn etebase_item_get_uid(this: &Item) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.uid()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -1875,13 +2109,16 @@ pub unsafe extern fn etebase_item_get_uid(this: &Item) -> *const c_char {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_get_etag(this: &Item) -> *const c_char {
+pub unsafe extern "C" fn etebase_item_get_etag(this: &Item) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.etag()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -1889,13 +2126,12 @@ pub unsafe extern fn etebase_item_get_etag(this: &Item) -> *const c_char {
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_item_destroy(this: *mut Item) {
+pub unsafe extern "C" fn etebase_item_destroy(this: *mut Item) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class UserProfile {
 
@@ -1903,7 +2139,7 @@ pub unsafe extern fn etebase_item_destroy(this: *mut Item) {
 ///
 /// This is used for identifying the user and safely sending them data (such as \ref invitations EtebaseSignedInvitation).
 #[no_mangle]
-pub unsafe extern fn etebase_user_profile_get_pubkey(this: &UserProfile) -> *const c_void {
+pub unsafe extern "C" fn etebase_user_profile_get_pubkey(this: &UserProfile) -> *const c_void {
     this.pubkey().as_ptr() as *const c_void
 }
 
@@ -1911,7 +2147,7 @@ pub unsafe extern fn etebase_user_profile_get_pubkey(this: &UserProfile) -> *con
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_user_profile_get_pubkey_size(this: &UserProfile) -> usize {
+pub unsafe extern "C" fn etebase_user_profile_get_pubkey_size(this: &UserProfile) -> usize {
     this.pubkey().len()
 }
 
@@ -1919,13 +2155,12 @@ pub unsafe extern fn etebase_user_profile_get_pubkey_size(this: &UserProfile) ->
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_user_profile_destroy(this: *mut UserProfile) {
+pub unsafe extern "C" fn etebase_user_profile_destroy(this: *mut UserProfile) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // class InvitationListResponse {
 
@@ -1935,13 +2170,18 @@ type InvitationListResponse = etebase::IteratorListResponse<SignedInvitation>;
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_list_response_get_iterator(this: &InvitationListResponse) -> *const c_char {
+pub unsafe extern "C" fn etebase_invitation_list_response_get_iterator(
+    this: &InvitationListResponse,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.iterator().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -1950,7 +2190,10 @@ pub unsafe extern fn etebase_invitation_list_response_get_iterator(this: &Invita
 /// @param this_ the object handle
 /// @param[out] data the array to store the items in
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_list_response_get_data(this: &InvitationListResponse, data: *mut *const SignedInvitation) -> i32 {
+pub unsafe extern "C" fn etebase_invitation_list_response_get_data(
+    this: &InvitationListResponse,
+    data: *mut *const SignedInvitation,
+) -> i32 {
     let ret: Vec<&SignedInvitation> = this.data().iter().collect();
     data.copy_from_nonoverlapping(ret.as_ptr() as *mut *const SignedInvitation, ret.len());
     0
@@ -1960,7 +2203,9 @@ pub unsafe extern fn etebase_invitation_list_response_get_data(this: &Invitation
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_list_response_get_data_length(this: &InvitationListResponse) -> usize {
+pub unsafe extern "C" fn etebase_invitation_list_response_get_data_length(
+    this: &InvitationListResponse,
+) -> usize {
     this.data().len()
 }
 
@@ -1968,7 +2213,9 @@ pub unsafe extern fn etebase_invitation_list_response_get_data_length(this: &Inv
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_list_response_is_done(this: &InvitationListResponse) -> bool {
+pub unsafe extern "C" fn etebase_invitation_list_response_is_done(
+    this: &InvitationListResponse,
+) -> bool {
     this.done()
 }
 
@@ -1976,13 +2223,14 @@ pub unsafe extern fn etebase_invitation_list_response_is_done(this: &InvitationL
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_list_response_destroy(this: *mut InvitationListResponse) {
+pub unsafe extern "C" fn etebase_invitation_list_response_destroy(
+    this: *mut InvitationListResponse,
+) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class InvitationManager {
 
@@ -1991,13 +2239,14 @@ pub unsafe extern fn etebase_invitation_list_response_destroy(this: *mut Invitat
 /// @param this_ the object handle
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_list_incoming(this: &CollectionInvitationManager, fetch_options: Option<&FetchOptions>) -> *mut InvitationListResponse {
+pub unsafe extern "C" fn etebase_invitation_manager_list_incoming(
+    this: &CollectionInvitationManager,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut InvitationListResponse {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.list_incoming(fetch_options.as_ref()))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(
+        this.list_incoming(fetch_options.as_ref())
+    )))
 }
 
 /// List the outgoing collection invitations for the account
@@ -2005,13 +2254,14 @@ pub unsafe extern fn etebase_invitation_manager_list_incoming(this: &CollectionI
 /// @param this_ the object handle
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_list_outgoing(this: &CollectionInvitationManager, fetch_options: Option<&FetchOptions>) -> *mut InvitationListResponse {
+pub unsafe extern "C" fn etebase_invitation_manager_list_outgoing(
+    this: &CollectionInvitationManager,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut InvitationListResponse {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.list_outgoing(fetch_options.as_ref()))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(
+        this.list_outgoing(fetch_options.as_ref())
+    )))
 }
 
 /// Accept an invitation
@@ -2019,7 +2269,10 @@ pub unsafe extern fn etebase_invitation_manager_list_outgoing(this: &CollectionI
 /// @param this_ the object handle
 /// @param invitation the invitation to accept
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_accept(this: &CollectionInvitationManager, invitation: &SignedInvitation) -> i32 {
+pub unsafe extern "C" fn etebase_invitation_manager_accept(
+    this: &CollectionInvitationManager,
+    invitation: &SignedInvitation,
+) -> i32 {
     try_or_int!(this.accept(invitation));
     0
 }
@@ -2029,7 +2282,10 @@ pub unsafe extern fn etebase_invitation_manager_accept(this: &CollectionInvitati
 /// @param this_ the object handle
 /// @param invitation the invitation to reject
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_reject(this: &CollectionInvitationManager, invitation: &SignedInvitation) -> i32 {
+pub unsafe extern "C" fn etebase_invitation_manager_reject(
+    this: &CollectionInvitationManager,
+    invitation: &SignedInvitation,
+) -> i32 {
     try_or_int!(this.reject(invitation));
     0
 }
@@ -2039,13 +2295,12 @@ pub unsafe extern fn etebase_invitation_manager_reject(this: &CollectionInvitati
 /// @param this_ the object handle
 /// @param username the username of the user to fetch
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_fetch_user_profile(this: &CollectionInvitationManager, username: *const c_char) -> *mut UserProfile {
+pub unsafe extern "C" fn etebase_invitation_manager_fetch_user_profile(
+    this: &CollectionInvitationManager,
+    username: *const c_char,
+) -> *mut UserProfile {
     let username = CStr::from_ptr(username).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.fetch_user_profile(username))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(this.fetch_user_profile(username))))
 }
 
 /// Invite a user to a collection
@@ -2057,7 +2312,14 @@ pub unsafe extern fn etebase_invitation_manager_fetch_user_profile(this: &Collec
 /// @param pubkey_size the size of the public key
 /// @param access_level the level of access to give to user
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_invite(this: &CollectionInvitationManager, collection: &Collection, username: *const c_char, pubkey: *const c_void, pubkey_size: usize, access_level: CollectionAccessLevel) -> i32 {
+pub unsafe extern "C" fn etebase_invitation_manager_invite(
+    this: &CollectionInvitationManager,
+    collection: &Collection,
+    username: *const c_char,
+    pubkey: *const c_void,
+    pubkey_size: usize,
+    access_level: CollectionAccessLevel,
+) -> i32 {
     let username = CStr::from_ptr(username).to_str().unwrap();
     let pubkey = std::slice::from_raw_parts(pubkey as *const u8, pubkey_size);
     try_or_int!(this.invite(collection, username, pubkey, access_level));
@@ -2069,7 +2331,10 @@ pub unsafe extern fn etebase_invitation_manager_invite(this: &CollectionInvitati
 /// @param this_ the object handle
 /// @param invitation the invitation to cancel
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_disinvite(this: &CollectionInvitationManager, invitation: &SignedInvitation) -> i32 {
+pub unsafe extern "C" fn etebase_invitation_manager_disinvite(
+    this: &CollectionInvitationManager,
+    invitation: &SignedInvitation,
+) -> i32 {
     try_or_int!(this.disinvite(invitation));
     0
 }
@@ -2081,7 +2346,9 @@ pub unsafe extern fn etebase_invitation_manager_disinvite(this: &CollectionInvit
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_get_pubkey(this: &CollectionInvitationManager) -> *const c_void {
+pub unsafe extern "C" fn etebase_invitation_manager_get_pubkey(
+    this: &CollectionInvitationManager,
+) -> *const c_void {
     this.pubkey().as_ptr() as *const c_void
 }
 
@@ -2089,7 +2356,9 @@ pub unsafe extern fn etebase_invitation_manager_get_pubkey(this: &CollectionInvi
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_get_pubkey_size(this: &CollectionInvitationManager) -> usize {
+pub unsafe extern "C" fn etebase_invitation_manager_get_pubkey_size(
+    this: &CollectionInvitationManager,
+) -> usize {
     this.pubkey().len()
 }
 
@@ -2097,13 +2366,14 @@ pub unsafe extern fn etebase_invitation_manager_get_pubkey_size(this: &Collectio
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_invitation_manager_destroy(this: *mut CollectionInvitationManager) {
+pub unsafe extern "C" fn etebase_invitation_manager_destroy(
+    this: *mut CollectionInvitationManager,
+) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class SignedInvitation {
 
@@ -2111,25 +2381,28 @@ pub unsafe extern fn etebase_invitation_manager_destroy(this: *mut CollectionInv
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_signed_invitation_clone(this: &SignedInvitation) -> *mut SignedInvitation {
-    Box::into_raw(
-        Box::new(
-            this.clone()
-        )
-    )
+pub unsafe extern "C" fn etebase_signed_invitation_clone(
+    this: &SignedInvitation,
+) -> *mut SignedInvitation {
+    Box::into_raw(Box::new(this.clone()))
 }
 
 /// The uid of the invitation
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_signed_invitation_get_uid(this: &SignedInvitation) -> *const c_char {
+pub unsafe extern "C" fn etebase_signed_invitation_get_uid(
+    this: &SignedInvitation,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.uid()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -2137,13 +2410,18 @@ pub unsafe extern fn etebase_signed_invitation_get_uid(this: &SignedInvitation) 
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_signed_invitation_get_username(this: &SignedInvitation) -> *const c_char {
+pub unsafe extern "C" fn etebase_signed_invitation_get_username(
+    this: &SignedInvitation,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.username()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -2151,13 +2429,18 @@ pub unsafe extern fn etebase_signed_invitation_get_username(this: &SignedInvitat
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_signed_invitation_get_collection(this: &SignedInvitation) -> *const c_char {
+pub unsafe extern "C" fn etebase_signed_invitation_get_collection(
+    this: &SignedInvitation,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.collection()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -2165,7 +2448,9 @@ pub unsafe extern fn etebase_signed_invitation_get_collection(this: &SignedInvit
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_signed_invitation_get_access_level(this: &SignedInvitation) -> CollectionAccessLevel {
+pub unsafe extern "C" fn etebase_signed_invitation_get_access_level(
+    this: &SignedInvitation,
+) -> CollectionAccessLevel {
     this.access_level()
 }
 
@@ -2173,37 +2458,44 @@ pub unsafe extern fn etebase_signed_invitation_get_access_level(this: &SignedInv
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_signed_invitation_get_from_username(this: &SignedInvitation) -> *const c_void {
-    this.from_username().map(|x| x.as_ptr()).unwrap_or(std::ptr::null()) as *const c_void
+pub unsafe extern "C" fn etebase_signed_invitation_get_from_username(
+    this: &SignedInvitation,
+) -> *const c_void {
+    this.sender_username()
+        .map(|x| x.as_ptr())
+        .unwrap_or(std::ptr::null()) as *const c_void
 }
 
 /// The public key of the inviting user
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_signed_invitation_get_from_pubkey(this: &SignedInvitation) -> *const c_void {
-    this.from_pubkey().as_ptr() as *const c_void
+pub unsafe extern "C" fn etebase_signed_invitation_get_from_pubkey(
+    this: &SignedInvitation,
+) -> *const c_void {
+    this.sender_pubkey().as_ptr() as *const c_void
 }
 
 /// The size of the public key of the inviting user
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_signed_invitation_get_from_pubkey_size(this: &SignedInvitation) -> usize {
-    this.from_pubkey().len()
+pub unsafe extern "C" fn etebase_signed_invitation_get_from_pubkey_size(
+    this: &SignedInvitation,
+) -> usize {
+    this.sender_pubkey().len()
 }
 
 /// Destroy the object
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_signed_invitation_destroy(this: *mut SignedInvitation) {
+pub unsafe extern "C" fn etebase_signed_invitation_destroy(this: *mut SignedInvitation) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class CollectionMember {
 
@@ -2211,25 +2503,28 @@ pub unsafe extern fn etebase_signed_invitation_destroy(this: *mut SignedInvitati
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_clone(this: &CollectionMember) -> *mut CollectionMember {
-    Box::into_raw(
-        Box::new(
-            this.clone()
-        )
-    )
+pub unsafe extern "C" fn etebase_collection_member_clone(
+    this: &CollectionMember,
+) -> *mut CollectionMember {
+    Box::into_raw(Box::new(this.clone()))
 }
 
 /// The username of a member
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_get_username(this: &CollectionMember) -> *const c_char {
+pub unsafe extern "C" fn etebase_collection_member_get_username(
+    this: &CollectionMember,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = CString::new(this.username()).ok();
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -2237,7 +2532,9 @@ pub unsafe extern fn etebase_collection_member_get_username(this: &CollectionMem
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_get_access_level(this: &CollectionMember) -> CollectionAccessLevel {
+pub unsafe extern "C" fn etebase_collection_member_get_access_level(
+    this: &CollectionMember,
+) -> CollectionAccessLevel {
     this.access_level()
 }
 
@@ -2245,13 +2542,12 @@ pub unsafe extern fn etebase_collection_member_get_access_level(this: &Collectio
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_destroy(this: *mut CollectionMember) {
+pub unsafe extern "C" fn etebase_collection_member_destroy(this: *mut CollectionMember) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class MemberListResponse {
 
@@ -2261,13 +2557,18 @@ type MemberListResponse = etebase::IteratorListResponse<CollectionMember>;
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_member_list_response_get_iterator(this: &MemberListResponse) -> *const c_char {
+pub unsafe extern "C" fn etebase_member_list_response_get_iterator(
+    this: &MemberListResponse,
+) -> *const c_char {
     thread_local! {
         static LAST: RefCell<Option<CString>> = RefCell::new(None);
     }
     LAST.with(|ret| {
         *ret.borrow_mut() = this.iterator().map(|x| CString::new(x).unwrap());
-        ret.borrow().as_ref().map(|x| x.as_ptr()).unwrap_or(std::ptr::null())
+        ret.borrow()
+            .as_ref()
+            .map(|x| x.as_ptr())
+            .unwrap_or(std::ptr::null())
     })
 }
 
@@ -2276,7 +2577,10 @@ pub unsafe extern fn etebase_member_list_response_get_iterator(this: &MemberList
 /// @param this_ the object handle
 /// @param[out] data the array to store the collection members in
 #[no_mangle]
-pub unsafe extern fn etebase_member_list_response_get_data(this: &MemberListResponse, data: *mut *const CollectionMember) -> i32 {
+pub unsafe extern "C" fn etebase_member_list_response_get_data(
+    this: &MemberListResponse,
+    data: *mut *const CollectionMember,
+) -> i32 {
     let ret: Vec<&CollectionMember> = this.data().iter().collect();
     data.copy_from_nonoverlapping(ret.as_ptr() as *mut *const CollectionMember, ret.len());
     0
@@ -2286,7 +2590,9 @@ pub unsafe extern fn etebase_member_list_response_get_data(this: &MemberListResp
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_member_list_response_get_data_length(this: &MemberListResponse) -> usize {
+pub unsafe extern "C" fn etebase_member_list_response_get_data_length(
+    this: &MemberListResponse,
+) -> usize {
     this.data().len()
 }
 
@@ -2294,7 +2600,7 @@ pub unsafe extern fn etebase_member_list_response_get_data_length(this: &MemberL
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_member_list_response_is_done(this: &MemberListResponse) -> bool {
+pub unsafe extern "C" fn etebase_member_list_response_is_done(this: &MemberListResponse) -> bool {
     this.done()
 }
 
@@ -2302,13 +2608,12 @@ pub unsafe extern fn etebase_member_list_response_is_done(this: &MemberListRespo
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_member_list_response_destroy(this: *mut MemberListResponse) {
+pub unsafe extern "C" fn etebase_member_list_response_destroy(this: *mut MemberListResponse) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class CollectionMemberManager {
 
@@ -2317,13 +2622,12 @@ pub unsafe extern fn etebase_member_list_response_destroy(this: *mut MemberListR
 /// @param this_ the object handle
 /// @param fetch_options the `EtebaseFetchOptions` to fetch with
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_manager_list(this: &CollectionMemberManager, fetch_options: Option<&FetchOptions>) -> *mut MemberListResponse {
+pub unsafe extern "C" fn etebase_collection_member_manager_list(
+    this: &CollectionMemberManager,
+    fetch_options: Option<&FetchOptions>,
+) -> *mut MemberListResponse {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.list(fetch_options.as_ref()))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(this.list(fetch_options.as_ref()))))
 }
 
 /// Remove a member from the collection
@@ -2331,7 +2635,10 @@ pub unsafe extern fn etebase_collection_member_manager_list(this: &CollectionMem
 /// @param this_ the object handle
 /// @param username the member's username
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_manager_remove(this: &CollectionMemberManager, username: *const c_char) -> i32 {
+pub unsafe extern "C" fn etebase_collection_member_manager_remove(
+    this: &CollectionMemberManager,
+    username: *const c_char,
+) -> i32 {
     let username = CStr::from_ptr(username).to_str().unwrap();
     try_or_int!(this.remove(username));
     0
@@ -2341,7 +2648,9 @@ pub unsafe extern fn etebase_collection_member_manager_remove(this: &CollectionM
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_manager_leave(this: &CollectionMemberManager) -> i32 {
+pub unsafe extern "C" fn etebase_collection_member_manager_leave(
+    this: &CollectionMemberManager,
+) -> i32 {
     try_or_int!(this.leave());
     0
 }
@@ -2352,7 +2661,11 @@ pub unsafe extern fn etebase_collection_member_manager_leave(this: &CollectionMe
 /// @param username the member's username
 /// @param access_level the new `EtebaseCollectionAccessLevel`
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_manager_modify_access_level(this: &CollectionMemberManager, username: *const c_char, access_level: CollectionAccessLevel) -> i32 {
+pub unsafe extern "C" fn etebase_collection_member_manager_modify_access_level(
+    this: &CollectionMemberManager,
+    username: *const c_char,
+    access_level: CollectionAccessLevel,
+) -> i32 {
     let username = CStr::from_ptr(username).to_str().unwrap();
     try_or_int!(this.modify_access_level(username, access_level));
     0
@@ -2362,13 +2675,14 @@ pub unsafe extern fn etebase_collection_member_manager_modify_access_level(this:
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_collection_member_manager_destroy(this: *mut CollectionMemberManager) {
+pub unsafe extern "C" fn etebase_collection_member_manager_destroy(
+    this: *mut CollectionMemberManager,
+) {
     let this = Box::from_raw(this);
     drop(this);
 }
 
 // }
-
 
 // Class FileSystemCache {
 
@@ -2379,21 +2693,23 @@ pub unsafe extern fn etebase_collection_member_manager_destroy(this: *mut Collec
 /// @param path the path to a directory to store cache in
 /// @param username username of the user to cache data for
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_new(path: *const c_char, username: *const c_char) -> *mut FileSystemCache {
+pub unsafe extern "C" fn etebase_fs_cache_new(
+    path: *const c_char,
+    username: *const c_char,
+) -> *mut FileSystemCache {
     let path = PathBuf::from(CStr::from_ptr(path).to_str().unwrap());
     let username = CStr::from_ptr(username).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            try_or_null!(FileSystemCache::new(path.as_path(), username))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(FileSystemCache::new(
+        path.as_path(),
+        username
+    ))))
 }
 
 /// Clear all cache for the user
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_clear_user(this: &FileSystemCache) -> i32 {
+pub unsafe extern "C" fn etebase_fs_cache_clear_user(this: &FileSystemCache) -> i32 {
     try_or_int!(this.clear_user_cache());
     0
 }
@@ -2407,11 +2723,19 @@ pub unsafe extern fn etebase_fs_cache_clear_user(this: &FileSystemCache) -> i32 
 /// @param encryption_key used to encrypt the saved account string to enhance security
 /// @param encryption_key_size the size of the encryption_key
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_save_account(this: &FileSystemCache, etebase: &Account, encryption_key: *const c_void, encryption_key_size: usize) -> i32 {
+pub unsafe extern "C" fn etebase_fs_cache_save_account(
+    this: &FileSystemCache,
+    etebase: &Account,
+    encryption_key: *const c_void,
+    encryption_key_size: usize,
+) -> i32 {
     let encryption_key = if encryption_key.is_null() {
         None
     } else {
-        Some(std::slice::from_raw_parts(encryption_key as *const u8, encryption_key_size))
+        Some(std::slice::from_raw_parts(
+            encryption_key as *const u8,
+            encryption_key_size,
+        ))
     };
     try_or_int!(this.save_account(etebase, encryption_key));
     0
@@ -2424,17 +2748,23 @@ pub unsafe extern fn etebase_fs_cache_save_account(this: &FileSystemCache, eteba
 /// @param encryption_key the same encryption key passed to [Self::save_account] while saving the account
 /// @param encryption_key_size the size of the encryption_key
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_load_account(this: &FileSystemCache, client: &Client, encryption_key: *const c_void, encryption_key_size: usize) -> *mut Account {
+pub unsafe extern "C" fn etebase_fs_cache_load_account(
+    this: &FileSystemCache,
+    client: &Client,
+    encryption_key: *const c_void,
+    encryption_key_size: usize,
+) -> *mut Account {
     let encryption_key = if encryption_key.is_null() {
         None
     } else {
-        Some(std::slice::from_raw_parts(encryption_key as *const u8, encryption_key_size))
+        Some(std::slice::from_raw_parts(
+            encryption_key as *const u8,
+            encryption_key_size,
+        ))
     };
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.load_account(client, encryption_key))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(
+        this.load_account(client, encryption_key)
+    )))
 }
 
 /// Save the collection list sync token
@@ -2442,7 +2772,10 @@ pub unsafe extern fn etebase_fs_cache_load_account(this: &FileSystemCache, clien
 /// @param this_ the object handle
 /// @param stoken the sync token to be saved
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_save_stoken(this: &FileSystemCache, stoken: *const c_char) -> i32 {
+pub unsafe extern "C" fn etebase_fs_cache_save_stoken(
+    this: &FileSystemCache,
+    stoken: *const c_char,
+) -> i32 {
     let stoken = CStr::from_ptr(stoken).to_str().unwrap();
     try_or_int!(this.save_stoken(stoken));
     0
@@ -2452,11 +2785,11 @@ pub unsafe extern fn etebase_fs_cache_save_stoken(this: &FileSystemCache, stoken
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_load_stoken(this: &FileSystemCache) -> *mut c_char {
+pub unsafe extern "C" fn etebase_fs_cache_load_stoken(this: &FileSystemCache) -> *mut c_char {
     let stoken = try_or_null!(this.load_stoken());
     match stoken {
         Some(stoken) => try_or_null!(CString::new(stoken)).into_raw(),
-        None => std::ptr::null_mut()
+        None => std::ptr::null_mut(),
     }
 }
 
@@ -2466,7 +2799,11 @@ pub unsafe extern fn etebase_fs_cache_load_stoken(this: &FileSystemCache) -> *mu
 /// @param col_uid the UID of the collection
 /// @param stoken the sync token to be saved
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_collection_save_stoken(this: &FileSystemCache, col_uid: *const c_char, stoken: *const c_char) -> i32 {
+pub unsafe extern "C" fn etebase_fs_cache_collection_save_stoken(
+    this: &FileSystemCache,
+    col_uid: *const c_char,
+    stoken: *const c_char,
+) -> i32 {
     let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
     let stoken = CStr::from_ptr(stoken).to_str().unwrap();
     try_or_int!(this.collection_save_stoken(col_uid, stoken));
@@ -2478,12 +2815,15 @@ pub unsafe extern fn etebase_fs_cache_collection_save_stoken(this: &FileSystemCa
 /// @param this_ the object handle
 /// @param col_uid the UID of the collection
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_collection_load_stoken(this: &FileSystemCache, col_uid: *const c_char) -> *mut c_char {
+pub unsafe extern "C" fn etebase_fs_cache_collection_load_stoken(
+    this: &FileSystemCache,
+    col_uid: *const c_char,
+) -> *mut c_char {
     let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
     let stoken = try_or_null!(this.collection_load_stoken(col_uid));
     match stoken {
         Some(stoken) => try_or_null!(CString::new(stoken)).into_raw(),
-        None => std::ptr::null_mut()
+        None => std::ptr::null_mut(),
     }
 }
 
@@ -2493,7 +2833,11 @@ pub unsafe extern fn etebase_fs_cache_collection_load_stoken(this: &FileSystemCa
 /// @param col_mgr collection manager for the account
 /// @param col the collection to be saved
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_collection_set(this: &FileSystemCache, col_mgr: &CollectionManager, col: &Collection) -> i32 {
+pub unsafe extern "C" fn etebase_fs_cache_collection_set(
+    this: &FileSystemCache,
+    col_mgr: &CollectionManager,
+    col: &Collection,
+) -> i32 {
     try_or_int!(this.collection_set(col_mgr, col));
     0
 }
@@ -2504,7 +2848,11 @@ pub unsafe extern fn etebase_fs_cache_collection_set(this: &FileSystemCache, col
 /// @param col_mgr collection manager for the account
 /// @param col_uid the UID of the collection to remove
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_collection_unset(this: &FileSystemCache, col_mgr: &CollectionManager, col_uid: *const c_char) -> i32 {
+pub unsafe extern "C" fn etebase_fs_cache_collection_unset(
+    this: &FileSystemCache,
+    col_mgr: &CollectionManager,
+    col_uid: *const c_char,
+) -> i32 {
     let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
     try_or_int!(this.collection_unset(col_mgr, col_uid));
     0
@@ -2516,13 +2864,13 @@ pub unsafe extern fn etebase_fs_cache_collection_unset(this: &FileSystemCache, c
 /// @param col_mgr collection manager for the account
 /// @param col_uid the UID of the collection
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_collection_get(this: &FileSystemCache, col_mgr: &CollectionManager, col_uid: *const c_char) -> *mut Collection {
+pub unsafe extern "C" fn etebase_fs_cache_collection_get(
+    this: &FileSystemCache,
+    col_mgr: &CollectionManager,
+    col_uid: *const c_char,
+) -> *mut Collection {
     let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.collection(col_mgr, col_uid))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(this.collection(col_mgr, col_uid))))
 }
 
 /// Save an item to cache
@@ -2532,7 +2880,12 @@ pub unsafe extern fn etebase_fs_cache_collection_get(this: &FileSystemCache, col
 /// @param col_uid the UID of the parent collection
 /// @param item the item to be saved
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_item_set(this: &FileSystemCache, item_mgr: &ItemManager, col_uid: *const c_char, item: &Item) -> i32 {
+pub unsafe extern "C" fn etebase_fs_cache_item_set(
+    this: &FileSystemCache,
+    item_mgr: &ItemManager,
+    col_uid: *const c_char,
+    item: &Item,
+) -> i32 {
     let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
     try_or_int!(this.item_set(item_mgr, col_uid, item));
     0
@@ -2545,7 +2898,12 @@ pub unsafe extern fn etebase_fs_cache_item_set(this: &FileSystemCache, item_mgr:
 /// @param col_uid the UID of the parent collection
 /// @param item_uid the UID of the item
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_item_unset(this: &FileSystemCache, item_mgr: &ItemManager, col_uid: *const c_char, item_uid: *const c_char) -> i32 {
+pub unsafe extern "C" fn etebase_fs_cache_item_unset(
+    this: &FileSystemCache,
+    item_mgr: &ItemManager,
+    col_uid: *const c_char,
+    item_uid: *const c_char,
+) -> i32 {
     let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
     let item_uid = CStr::from_ptr(item_uid).to_str().unwrap();
     try_or_int!(this.item_unset(item_mgr, col_uid, item_uid));
@@ -2559,21 +2917,24 @@ pub unsafe extern fn etebase_fs_cache_item_unset(this: &FileSystemCache, item_mg
 /// @param col_uid the UID of the parent collection
 /// @param item_uid the UID of the item
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_item_get(this: &FileSystemCache, item_mgr: &ItemManager, col_uid: *const c_char, item_uid: *const c_char) -> *mut Item {
+pub unsafe extern "C" fn etebase_fs_cache_item_get(
+    this: &FileSystemCache,
+    item_mgr: &ItemManager,
+    col_uid: *const c_char,
+    item_uid: *const c_char,
+) -> *mut Item {
     let col_uid = CStr::from_ptr(col_uid).to_str().unwrap();
     let item_uid = CStr::from_ptr(item_uid).to_str().unwrap();
-    Box::into_raw(
-        Box::new(
-            try_or_null!(this.item(item_mgr, col_uid, item_uid))
-        )
-    )
+    Box::into_raw(Box::new(try_or_null!(
+        this.item(item_mgr, col_uid, item_uid)
+    )))
 }
 
 /// Destroy the object
 ///
 /// @param this_ the object handle
 #[no_mangle]
-pub unsafe extern fn etebase_fs_cache_destroy(this: *mut FileSystemCache) {
+pub unsafe extern "C" fn etebase_fs_cache_destroy(this: *mut FileSystemCache) {
     let this = Box::from_raw(this);
     drop(this);
 }
