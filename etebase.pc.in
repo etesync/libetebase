@@ -4,6 +4,6 @@ includedir=${prefix}/include
 
 Name: Etebase
 Description: A C library for Etebase
-Version: 0.5.5
+Version: 0.5.6
 Libs: -L${libdir} -letebase
 Cflags: -I${includedir}/etebase

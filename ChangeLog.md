@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.5.6
+* Update dependencies (`cargo update`)
+
 ## Version 0.5.5
 * Update to the latest etebase-rs release
 
