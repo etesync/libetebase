@@ -1817,7 +1817,9 @@ pub unsafe extern "C" fn etebase_collection_get_meta_raw(
 ) -> isize {
     let ret = try_or_int!(this.meta_raw());
     let size = std::cmp::min(buf_size, ret.len());
-    buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
+    if !buf.is_null() {
+        buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
+    }
     size as isize
 }
 
@@ -1850,7 +1852,9 @@ pub unsafe extern "C" fn etebase_collection_get_content(
 ) -> isize {
     let ret = try_or_int!(this.content());
     let size = std::cmp::min(buf_size, ret.len());
-    buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
+    if !buf.is_null() {
+        buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
+    }
     ret.len() as isize
 }
 
@@ -2032,7 +2036,9 @@ pub unsafe extern "C" fn etebase_item_get_meta_raw(
 ) -> isize {
     let ret = try_or_int!(this.meta_raw());
     let size = std::cmp::min(buf_size, ret.len());
-    buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
+    if !buf.is_null() {
+        buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
+    }
     size as isize
 }
 
@@ -2065,7 +2071,9 @@ pub unsafe extern "C" fn etebase_item_get_content(
 ) -> isize {
     let ret = try_or_int!(this.content());
     let size = std::cmp::min(buf_size, ret.len());
-    buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
+    if !buf.is_null() {
+        buf.copy_from_nonoverlapping(ret.as_ptr() as *const c_void, size);
+    }
     ret.len() as isize
 }
 
