@@ -84,7 +84,7 @@ test_base64() {
 
 int
 test_utils() {
-    assert_str_eq(etebase_get_default_server_url(), "https://api.etebase.com");
+    assert_str_eq(etebase_get_default_server_url(), "https://api.etebase.com/");
     char buf[32];
     fail_if(etebase_utils_randombytes(buf, sizeof(buf)));
     char pretty[ETEBASE_UTILS_PRETTY_FINGERPRINT_SIZE];
