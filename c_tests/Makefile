@@ -1,5 +1,7 @@
 TARGET = tests
-LIBS = -L. -l:../target/debug/libetebase.so
+# Set MODE to debug to build in debug mode
+MODE ?= release
+LIBS = -L. -l:../target/$(MODE)/libetebase.so
 CC = gcc
 CFLAGS = -g -Wall -I ../target
 
