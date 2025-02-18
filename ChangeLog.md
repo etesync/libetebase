@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.5.7
+* [Fix regression] Allow passing null pointers for values that allow null.
+* Update dependencies (`cargo update`)
+
 ## Version 0.5.6
 * Update dependencies (`cargo update`)
 
