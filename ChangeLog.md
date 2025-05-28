@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.5.8
+* Update etebase dependency.
+
 ## Version 0.5.7
 * [Fix regression] Allow passing null pointers for values that allow null.
 * Update dependencies (`cargo update`)
