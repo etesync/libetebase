@@ -5,6 +5,10 @@ MODE ?= release
 
 PKGNAME = etebase
 
+# Library version from Cargo.toml, the soname major matches build.rs
+VERSION := $(shell sed -n 's/^version *= *"\(.*\)"/\1/p' Cargo.toml | head -n 1)
+VERSION_MAJOR := $(firstword $(subst ., ,$(VERSION)))
+
 BUILDDIR = ./target
 
 DST_LIBRARY_DIR = $(DESTDIR)$(PREFIX)/lib
@@ -39,7 +43,9 @@ install:
 	install -Dm644 "$(PKGCONFIG_FILE)" -t "$(DST_PKGCONFIG_DIR)"
 	install -Dm644 "$(CMAKECONFIG_FILE)" -t "$(DST_CMAKECONFIG_DIR)"
 	install -Dm644 "$(HEADER_FILE)" -t "$(DST_INCLUDE_DIR)"
-	install -Dm755 "$(LIBRARY_FILE)" -t "$(DST_LIBRARY_DIR)"
+	install -Dm755 "$(LIBRARY_FILE)" "$(DST_LIBRARY_DIR)/lib$(PKGNAME).so.$(VERSION)"
+	ln -sf "lib$(PKGNAME).so.$(VERSION)" "$(DST_LIBRARY_DIR)/lib$(PKGNAME).so.$(VERSION_MAJOR)"
+	ln -sf "lib$(PKGNAME).so.$(VERSION_MAJOR)" "$(DST_LIBRARY_DIR)/lib$(PKGNAME).so"
 
 check: build
 	cargo check
