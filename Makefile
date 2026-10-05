@@ -7,7 +7,9 @@ PKGNAME = etebase
 
 BUILDDIR = ./target
 
-DST_LIBRARY_DIR = $(DESTDIR)$(PREFIX)/lib
+LIBDIR ?= $(PREFIX)/lib
+
+DST_LIBRARY_DIR = $(DESTDIR)$(LIBDIR)
 DST_PKGCONFIG_DIR = $(DST_LIBRARY_DIR)/pkgconfig
 DST_CMAKECONFIG_DIR = $(DST_LIBRARY_DIR)/cmake/Etebase
 DST_INCLUDE_DIR = $(DESTDIR)$(PREFIX)/include/$(PKGNAME)
@@ -25,7 +27,7 @@ pkgconfig: $(PKGCONFIG_FILE)
 
 $(PKGCONFIG_FILE): $(PKGNAME).pc.in
 	mkdir -p "$(BUILDDIR)"
-	sed "s#@prefix@#$(PREFIX)#g" $< > "$(BUILDDIR)/$(PKGNAME).pc"
+	sed -e "s#@prefix@#$(PREFIX)#g" -e "s#@libdir@#$(LIBDIR)#g" $< > "$(BUILDDIR)/$(PKGNAME).pc"
 
 build-release: pkgconfig
 	cargo build --release
